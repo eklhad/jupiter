@@ -1,0 +1,27 @@
+This is a speech adapter, running in user space,
+based on the acsint / acsbridge system.
+It is modeled after my Jupiter speech adapter that lives in the kernel,
+but we don't have to be in the kernel any longer!
+
+This is so new it's embryonic.
+But we may as well track it from the beginning, eh?
+
+jcmd.c implements the speech commands and is the heart of the adapter.
+
+The key bindings are in jup.cfg.
+
+jencode.c encodes certain constructs like dates and times and phone numbers
+and addresses etc, and jxlate.c translates these back out into words.
+Thus 02/03/1932 becomes
+february third nineteen thirdy 2
+You can exercise the text preprocessor, without running the adapter,
+by running
+jupiter tts
+or
+jupiter ltts
+ltts reads punctuations literally, every one of them.
+That may sound like overkill, but that's what I do 99.9% of the time.
+Perhaps because I'm a programmer - every punctuation is important.
+Even when I read a story, I'd rather hear the word comma than a pause.
+tts-trial has text to experiment with.
+jupiter ltts <tts-trial
