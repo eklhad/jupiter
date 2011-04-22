@@ -239,6 +239,7 @@ static void binmode(int action, int c, int quiet)
 	char *p;
 
 	switch(c) {
+	case 'e': p = &echoMode; break;
 	case 'n': p = &clicksOn; break;
 	case 'a': p = &autoRead; break;
 	case '1': p = &oneLine; break;
@@ -252,14 +253,17 @@ case 's': markleft = 0; p = &screenmode; break;
 	default: acs_bell(); return;
 } // switch
 
-	if(!quiet && c == 'n') acs_tone_onoff(0);
 	if(action == 0) *p = 0;
 	if(action == 1) *p = 1;
 	if(action == 2) *p ^= 1;
 	if(!quiet) acs_tone_onoff(*p);
 
 switch(c) {
-case 'n': acs_sounds(*p); break;
+case 'n':
+acs_sounds(*p);
+/* If turning sounds on, then the previous tone didn't take. */
+if(!quiet && *p) acs_tone_onoff(1);
+break;
 case 'o': ess_flowcontrol(1-*p); break;
 case 's': acs_screenmode(*p); break;
 case 'c':
@@ -391,7 +395,7 @@ static void runSpeechCommand(int input, const char *cmdlist)
 	char lasttext[256]; /* supporting text */
 	char support; /* supporting character */
 	int i, n;
-	int asword, rc, quiet, c;
+	int asword, quiet, rc, c;
 	char cmd;
 char *t;
 
@@ -400,7 +404,8 @@ interrupt();
 acs_cursorset();
 
 top:
-	cmd = *cmdlist++;
+	cmd = *cmdlist;
+if(cmd) ++cmdlist;
 	cmdp = &speechcommands[cmd];
 asword = 0;
 
@@ -410,26 +415,31 @@ asword = 0;
 	support = 0;
 	if(cmdp->nextchar) {
 		if(*cmdlist) support = *cmdlist++;
-else if(acs_get1char(&support)) goto error_bell;
+else{
+acs_click();
+if(acs_get1char(&support)) goto error_bell;
+}
 	}
-
-quiet = ((!input)|*cmdlist);
 
 suptext[0] = 0;
 if(cmdp->nextline) {
-if(!acs_keystring(suptext, sizeof(suptext), ACS_KS_DEFAULT)) return;
+acs_tone_onoff(0);
+if(acs_keystring(suptext, sizeof(suptext), ACS_KS_DEFAULT)) return;
 }
+
+quiet = ((!input)|*cmdlist);
 
 	/* perform the requested action */
 	switch(cmd) {
 	case 0: /* command string is finished */
 		acs_cursorsync();
+if(!quiet) acs_click();
 		return;
 
 	case 1:
 acs_clearbuf();
 markleft = 0;
-acs_tone_onoff(0);
+if(!quiet) acs_tone_onoff(0);
 break;
 
 	case 2: /* locate visual cursor */
@@ -492,11 +502,14 @@ acs_cursorsync();
 		rc = isupper(c);
 		if(clicksOn)
 			acs_tone_onoff(rc);
-		else
+		else {
+if(!quiet) acs_click();
 			ss_say_string((rc ? "upper" : "lower"));
-		break;
+}
+return;
 
 	case 18: /* read column number */
+if(!quiet) acs_click();
 		acs_cursorsync();
 		n = acs_startline();
 j_in->buf[0] = 0;
@@ -511,6 +524,7 @@ prepTTS();
 		if(acs_getc() == ' ') goto letter;
 
 	case 20: /* start continuous reading */
+if(!quiet) acs_click();
 startread:
 		/* We always start reading at the beginning of a word */
 acs_startword();
@@ -521,9 +535,7 @@ readNextPart();
 
 	case 21: ss_shutup(); break;
 
-	case 22:
-acs_bypass();
-return;
+	case 22: acs_bypass(); break;
 
 	/* clear, set, and toggle binary modes */
 	case 23: binmode(0, support, quiet); break;
@@ -538,8 +550,10 @@ else strcpy(suptext, lasttext);
 		if(!*suptext) goto error_bell;
 		if(!acs_bufsearch(suptext, asword, oneLine)) goto error_bound;
 		acs_cursorsync();
+if(!quiet) acs_cr();
 		if(!oneLine) {
 			ss_say_string("o k");
+rb->cursor -= (strlen(suptext)-1);
 			return;
 		}
 		/* start reading at the beginning of this line */
@@ -609,7 +623,8 @@ goto speechparam;
 	case 38: /* key binding */
 if(acs_line_configure(suptext, cfg_syntax))
 goto error_bell;
-		break;
+if(!quiet) acs_cr();
+		return;
 
 	case 39: /* last complete line */
 acs_endbuf();
@@ -653,7 +668,8 @@ cutbuf[n] = 0;
 if(acs_line_configure(cutbuf, cfg_syntax) < 0)
 goto error_bell;
 markleft = 0;
-break;
+if(!quiet) acs_tone_onoff(0);
+return;
 
 	case 42: /* set echo */
 		if(support < '0' || support > '4') goto error_bell;
@@ -712,10 +728,10 @@ prepTTS();
 
 static void more_h(int echo, unsigned int c)
 {
-if(echo)
+if(echoMode && echo == 1 && c < 256 && isprint(c)) {
 interrupt();
-if(echo == 1 && c < 256 && isprint(c))
 speakChar(c, 1, 0);
+}
 } /* more_h */
 
 static void
@@ -760,6 +776,11 @@ fprintf(stderr, "Could not malloc space for text preprocessing buffers.\n");
 exit(1);
 }
 
+if(argc && stringEqual(argv[0], "-d")) {
+acs_debug = 1;
+++argv, --argc;
+}
+
 if(argc && stringEqual(argv[0], "tts"))
 testTTS(0);
 
@@ -783,6 +804,10 @@ acs_more_h = more_h;
 // because it sends "key capture" commands to the acsint driver
 j_configure("jup.cfg");
 
+/* only doubletalk for now; this should come from argv */
+ss_style = SS_STYLE_DOUBLE;
+ss_startvalues();
+
 if(ess_open("/dev/ttyS2", 9600)) {
 fprintf(stderr, "Cannot open serial port %d\n", 2);
 exit(1);
@@ -795,7 +820,7 @@ openSound();
 ss_say_string("\1@ \0012b \00126g \0012o \00194i ");
 
 /* Adjust rate and voice, then greet. */
-ss_setvoice(3);
+ss_setvoice(7);
 ss_setspeed(9);
 ss_say_string("jupiter ready");
 
