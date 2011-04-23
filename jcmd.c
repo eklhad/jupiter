@@ -395,7 +395,7 @@ static void runSpeechCommand(int input, const char *cmdlist)
 	char lasttext[256]; /* supporting text */
 	char support; /* supporting character */
 	int i, n;
-	int asword, quiet, rc, c;
+	int asword, quiet, rc, gsprop, c;
 	char cmd;
 char *t;
 
@@ -520,8 +520,18 @@ prepTTS();
 		return;
 
 	case 19: /* just read one word */
-		asword = 1;
-		if(acs_getc() == ' ') goto letter;
+acs_cursorsync();
+c = acs_getc_uc();
+if(c <= ' ') goto letter;
+acs_startword();
+acs_cursorsync();
+gsprop = ACS_GS_STOPLINE | ACS_GS_REPEAT | ACS_GS_ONEWORD;
+j_in->buf[0] = 0;
+acs_getsentence(j_in->buf+1, WORDLEN, 0, gsprop);
+		j_in->len = strlen(j_in->buf+1) + 1;
+prepTTS();
+		ss_say_string(j_out->buf+1);
+break;
 
 	case 20: /* start continuous reading */
 if(!quiet) acs_click();
@@ -647,17 +657,18 @@ break;
 case 41: /* mark right */
 if(!input) goto error_bell;
 if(support < 'a' || support > 'z') goto error_bell;
+if(!markleft) goto error_bell;
 n = 0;
 cutbuf[n++] = '@';
 cutbuf[n++] = support;
 cutbuf[n] = 0;
 acs_line_configure(cutbuf, 0);
 cutbuf[n++] = '<';
-if(!markleft) goto error_bell;
 acs_cursorsync();
 markright = rb->cursor;
 if(markright < markleft) goto error_bound;
 i = markright - markleft;
+++i;
 if(i + n >= sizeof(cutbuf)) goto error_bound;
 while(i) {
 cutbuf[n] = acs_downshift(*markleft);
