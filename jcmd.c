@@ -341,8 +341,15 @@ copy_t:
 		return;
 	} /* control character */
 
+top:
 t = (char*)acs_getpunc(c);
 if(t) goto copy_t;
+
+if(c >= 256) {
+/* We are past getpunc(), guess we don't know how to say this unicode. */
+c = '?';
+goto top;
+}
 
 		if(!isalnum(c)) {
 			static char nonascii[] = "bite x x";
@@ -492,7 +499,7 @@ acs_endline();
 	case 16:
 letter:
 acs_cursorsync();
-		speakChar(acs_getc(), 1, asword);
+		speakChar(acs_getc_uc(), 1, asword);
 		break;
 
 	case 17: /* indicate case */
@@ -529,6 +536,8 @@ gsprop = ACS_GS_STOPLINE | ACS_GS_REPEAT | ACS_GS_ONEWORD;
 j_in->buf[0] = 0;
 acs_getsentence(j_in->buf+1, WORDLEN, 0, gsprop);
 		j_in->len = strlen(j_in->buf+1) + 1;
+rb->cursor += j_in->len-2;
+acs_cursorset();
 prepTTS();
 		ss_say_string(j_out->buf+1);
 break;
@@ -781,6 +790,9 @@ int
 main(int argc, char **argv)
 {
 ++argv, --argc;
+
+/* this has to be done first */
+acs_lang = LANG_ENGLISH;
 
 if(setupTTS()) {
 fprintf(stderr, "Could not malloc space for text preprocessing buffers.\n");

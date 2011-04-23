@@ -42,11 +42,6 @@ SP_URL,
 SP_DF, // date or fraction
 };
 
-enum LANGUAGES {
-LANG_NONE,
-LANG_ENGLISH,
-};
-
 
 /* Global variables */
 
@@ -69,7 +64,6 @@ extern int myZone; /* offset from gmt */
 extern char digitWords; /* read digits as words */
 extern char acronUpper; /* acronym letters in upper case? */
 extern char acronDelim;
-extern char j_lang; /* language, currently only english */
 extern char oneSymbol; /* read one symbol - not a sentence */
 extern char readLiteral; // read each punctuation mark
 /* a convenient place to put little phrases to speak */

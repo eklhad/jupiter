@@ -871,7 +871,7 @@ and make the lookup efficient.
 
 Each entry is associated with a particular language.
 At sort time, most of these entries are culled,
-leaving only the entries that correspond with the setting of j_lang.
+leaving only the entries that correspond with the setting of acs_lang.
 Thus you cannot switch between languages on the fly.
 We may "fix" this deficiency some day,
 but for now, it isn't a big inconvenience.
@@ -1469,7 +1469,7 @@ void sortReservedWords(void)
 	/* Remove entries that are not part of this language. */
 	for(i=j=0; reserved[i].word; ++i) {
 		unsigned char lang = reserved[i].lang;
-		if(lang && lang != j_lang) continue;
+		if(lang && lang != acs_lang) continue;
 		reserved[j++] = reserved[i]; /* structure copy */
 	}
 	reserved[j] = reserved[i];

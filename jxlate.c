@@ -33,7 +33,6 @@ int myZone = -5; /* offset from gmt */
 char digitWords = 0; /* read digits as words */
 char acronUpper = 1; /* acronym letters in upper case? */
 char acronDelim = ' ';
-char j_lang; /* language, currently only english */
 char oneSymbol; /* read one symbol - not a sentence */
 char readLiteral = 1; // read each punctuation mark
 /* a convenient place to put little phrases to speak */
@@ -250,8 +249,7 @@ return -1;
 j_in->room = room;
 j_out->room = room;
 
-j_lang = LANG_ENGLISH;
-	ow = outwords + j_lang;
+	ow = outwords + LANG_ENGLISH; /* that's all we have for now */
 	articles = ow->articles;
 	andWord = ow->andWord;
 
