@@ -68,6 +68,8 @@ static const struct cmd speechcommands[] = {
 {"mark left", "markl", 1},
 {"mark right", "markr", 1, 0, 1},
 {"set echo", "echo", 0, 0, 1},
+{"label", "label", 1, 0, 1},
+{"jump", "jump", 1, 0, 1},
 	{0,""}
 };
 
@@ -226,7 +228,9 @@ static char oneLine; /* read one line at a time */
 static char transparent; // pass through
 static char overrideSignals = 0; // don't rely on cts rts etc
 static char reading; /* continuous reading in progress */
-static unsigned int *markleft, *markright; // for cut&paste
+/* for cut&paste */
+#define markleft rb->marks[0]
+static unsigned int *markright;
 static char screenmode = 0;
 static char cc_buffer = 0; // control chars in the buffer
 static char echoMode; // echo keys as they are typed
@@ -386,8 +390,53 @@ if(ss_stillTalking()) ss_shutup();
 static void
 readNextPart(void)
 {
+int gsprop;
+int j;
+char *end; /* the end of the sentence */
+
+acs_refresh(); /* whether we need to or not */
+
+if(!rb->cursor) {
+/* lots of text pushed the reading cursor off the edge. */
 acs_buzz();
-reading = oneSymbol = 0;
+reading = 0;
+return;
+}
+
+/* grab something to read */
+gsprop = ACS_GS_REPEAT;
+if(oneLine | clicksOn)
+gsprop |= ACS_GS_STOPLINE;
+else
+gsprop |= ACS_GS_NLSPACE;
+j_in->buf[0] = 0;
+j_in->offset[0] = 0;
+acs_getsentence(j_in->buf+1, 120, j_in->offset+1, gsprop);
+
+if(!j_in->buf[1]) {
+/* Empty sentence, nothing else to read. */
+reading = 0;
+return;
+}
+
+end = strpbrk(j_in->buf+1, "\7\n");
+if(end == j_in->buf+1) {
+/* starts out with newline or bell, which is usually associated with a sound */
+/* Push end out to the next token, which should be at the next character */
+++end;
+for(j=2; !j_in->offset[j]; ++j, ++end)  ;
+rb->cursor += j_in->offset[j];
+speakChar(j_in->buf[1], 1, 0);
+return;
+}
+
+if(!end)
+end = j_in->buf+1 + strlen(j_in->buf+1);
+
+prepTTS();
+
+acs_buzz();
+reading = 0;
 } /* readNextPart */
 
 /*********************************************************************
@@ -534,6 +583,7 @@ acs_startword();
 acs_cursorsync();
 gsprop = ACS_GS_STOPLINE | ACS_GS_REPEAT | ACS_GS_ONEWORD;
 j_in->buf[0] = 0;
+j_in->offset[0] = 0;
 acs_getsentence(j_in->buf+1, WORDLEN, j_in->offset+1, gsprop);
 		j_in->len = strlen(j_in->buf+1) + 1;
 rb->cursor += j_in->offset[j_in->len] - 1;
@@ -699,6 +749,22 @@ static const char * const echoWords[] = { "off", "letters", "words", "letters pa
 ss_say_string(echoWords[echoMode]);
 }
 		break;
+
+case 43: /* set a marker in the tty buffer */
+if(support < 'a' || support > 'z') goto error_bell;
+acs_cursorsync();
+if(!rb->cursor) goto error_bell;
+rb->marks[support-'a'] = rb->cursor;
+if(!quiet) acs_tone_onoff(0);
+break;
+
+case 44: /* jump to a preset marker */
+if(support < 'a' || support > 'z') goto error_bell;
+if(!rb->marks[support-'a']) goto error_bell;
+rb->cursor = rb->marks[support-'a'];
+acs_cursorset();
+if(!quiet) acs_tone_onoff(0);
+break;
 
 	default:
 	error_bell:
