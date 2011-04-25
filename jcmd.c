@@ -229,7 +229,7 @@ static char transparent; // pass through
 static char overrideSignals = 0; // don't rely on cts rts etc
 static char reading; /* continuous reading in progress */
 /* for cut&paste */
-#define markleft rb->marks[0]
+#define markleft rb->marks[26]
 static unsigned int *markright;
 static char screenmode = 0;
 static char cc_buffer = 0; // control chars in the buffer
@@ -387,28 +387,37 @@ reading = oneSymbol = 0;
 if(ss_stillTalking()) ss_shutup();
 }
 
+#define readNextMark rb->marks[27]
+
 static void
 readNextPart(void)
 {
 int gsprop;
-int j;
+int i;
 char *end; /* the end of the sentence */
+char first;
 
 acs_refresh(); /* whether we need to or not */
 
+if(readNextMark)
+rb->cursor = readNextMark;
+readNextMark = 0;
+
 if(!rb->cursor) {
-/* lots of text pushed the reading cursor off the edge. */
+/* lots of text has pushed the reading cursor off the edge. */
 acs_buzz();
 reading = 0;
 return;
 }
 
-/* grab something to read */
 gsprop = ACS_GS_REPEAT;
 if(oneLine | clicksOn)
 gsprop |= ACS_GS_STOPLINE;
 else
 gsprop |= ACS_GS_NLSPACE;
+
+top:
+/* grab something to read */
 j_in->buf[0] = 0;
 j_in->offset[0] = 0;
 acs_getsentence(j_in->buf+1, 120, j_in->offset+1, gsprop);
@@ -416,27 +425,47 @@ acs_getsentence(j_in->buf+1, 120, j_in->offset+1, gsprop);
 if(!j_in->buf[1]) {
 /* Empty sentence, nothing else to read. */
 reading = 0;
+readNextMark = 0;
 return;
 }
 
-end = strpbrk(j_in->buf+1, "\7\n");
-if(end == j_in->buf+1) {
+first = j_in->buf[1];
+if(first == '\n' || first == '\7') {
 /* starts out with newline or bell, which is usually associated with a sound */
-/* Push end out to the next token, which should be at the next character */
-++end;
-for(j=2; !j_in->offset[j]; ++j, ++end)  ;
-rb->cursor += j_in->offset[j];
+/* This will swoop/beep with clicks on, or say the word newline or bell with clicks off */
 speakChar(j_in->buf[1], 1, 0);
+
+/* Find the next token/offset, which should be the next character */
+for(i=2; !j_in->offset[i]; ++i)  ;
+rb->cursor += j_in->offset[i];
+/* but don't leave it there if you have run off the end of the buffer */
+if(rb->cursor >= rb->end) {
+rb->cursor = rb->end-1;
+reading = 0;
+readNextMark = 0;
 return;
 }
 
-if(!end)
-end = j_in->buf+1 + strlen(j_in->buf+1);
+/* The following line is bad if there are ten thousand bells, no way to interrupt */
+/* I'll deal with that case later. */
+goto top;
+}
 
+j_in->len = 1 + strlen(j_in->buf+1);
 prepTTS();
 
-acs_buzz();
-reading = 0;
+/* Cut the text at a logical sentence, as indicated by newline.
+ * If newline wasn't already present in the input, this has been
+ * set for you by prepTTS. */
+end = strpbrk(j_out->buf+1, "\7\n");
+if(!end)
+end = j_out->buf+1 + strlen(j_out->buf+1);
+*end = 0;
+j_out->len = end - j_out->buf;
+readNextMark = rb->cursor + j_out->offset[j_out->len];
+ss_say_string_imarks(j_out->buf+1, j_out->offset+1, 1);
+reading = 0; /* temporary */
+readNextMark = 0;
 } /* readNextPart */
 
 /*********************************************************************
@@ -598,7 +627,7 @@ startread:
 		/* We always start reading at the beginning of a word */
 acs_startword();
 		acs_cursorsync();
-		if(asword) oneSymbol = 1; else reading = 1;
+reading = 1;
 readNextPart();
 		return; /* has to be the end of the composite */
 
@@ -627,7 +656,6 @@ rb->cursor -= (strlen(suptext)-1);
 		}
 		/* start reading at the beginning of this line */
 acs_startline();
-		asword = 0;
 		goto startread;
 
 	case 28: /* volume */
@@ -916,7 +944,7 @@ ss_say_string("jupiter ready");
 // This runs forever, you have to hit interrupt to kill it,
 // or kill it from another tty.
 while(1) {
-acs_events();
+acs_ss_events();
 
 if(last_key) {
 char *cmdlist; // the speech command
