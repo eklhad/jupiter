@@ -452,7 +452,20 @@ goto top;
 }
 
 j_in->len = 1 + strlen(j_in->buf+1);
+#if 0
+/* show offsets as returned by getsentence() */
+for(i=1; i<=j_in->len; ++i)
+if(j_in->offset[i])
+printf("%d=%d\n", i, j_in->offset[i]);
+#endif
 prepTTS();
+#if 0
+puts(j_out->buf+1);
+/* show offsets after prepTTS */
+for(i=1; i<=j_out->len; ++i)
+if(j_out->offset[i])
+printf("%d=%d\n", i, j_out->offset[i]);
+#endif
 
 /* Cut the text at a logical sentence, as indicated by newline.
  * If newline wasn't already present in the input, this has been

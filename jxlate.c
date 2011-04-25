@@ -2653,7 +2653,10 @@ Run all the phases of translation.
 char debugPoint;
 static ofs_type end_ofs;
 #define debugCheck(c, which) \
-if(debugPoint == c) printf("%s", which->buf+1); \
+if(debugPoint == c) { \
+int kk; \
+printf("%s", which->buf+1); \
+for(kk=1; kk<=which->len; ++kk) if(which->offset[kk]) printf("%d=%d\n", kk, which->offset[kk]); } \
 if(end_ofs != which->offset[which->len]) { \
 fprintf(stderr, "end offset inconsistency %c.%d.%d length %d\n", \
 c, end_ofs, which->offset[which->len], which->len); \
@@ -2686,9 +2689,12 @@ void prepTTS(void)
 		debugCheck('c', j_in);
 #endif
 
+#if 0
 		/* compress whitespace */
+/* don't think we need this any more */
 		doWhitespace();
 		debugCheck('d', j_in);
+#endif
 
 		/* remove garbage lines */
 		ungarbage();

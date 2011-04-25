@@ -58,18 +58,15 @@ void ascify(void)
 	for(; s < end_s; ++s, ++u) {
 		c = *s;
 		if(c == '\r' && s[1] == '\n') ++s, ++u;
-		if(c == '\n') c = '\r';
 
-#ifndef __KERNEL__
 		if(c == '\b') {
 			d = t[-1];
 			if(d && d != '\f' && d != '\r') --t, --v;
 			continue;
 		} /* backspace */
-#endif
 
-		if(c == '\r' || c == '\f') {
-			/* Rachet back to binary data. */
+		if(c == '\n' || c == '\f') {
+			/* Ratchet back to binary data. */
 			if(lastbin && t-lastbin < BINARYHORIZON) {
 				v -= (t-lastbin);
 				t = lastbin;
@@ -81,11 +78,9 @@ void ascify(void)
 			goto add_c;
 		} /* newline or formfeed */
 
-		if(c == 0) c = '\r'; /* let null look like cr */
+		if(c == 0) c = '\n'; /* let null look like newline */
 		if(c == '\t') goto add_c;
-#ifdef __KERNEL__
 		if(c == '\7')goto add_c;
-#endif
 		if(!readLiteral) {
 			/* Treat delete or control character as space */
 			if(c == '\177') c = ' ';
@@ -121,7 +116,7 @@ void ascify(void)
 			for(i=0, q=t; i<BINARYHORIZON; ++i) {
 				d = *--q;
 				if(!d) break;
-				if(d == '\r' || d == '\f') break;
+				if(d == '\n' || d == '\f') break;
 			} /* loop looking back */
 			if(i == BINARYHORIZON) {
 				/* nothing back there */
@@ -138,14 +133,12 @@ void ascify(void)
 		} /* found binary data */
 
 add_c:
-#ifndef __KERNEL__
 		if(c == SP_MARK) c = ' '; /* this one's reserved */
-#endif
 		*t++ = c;
 		*v++ = *u;
 	} /* end loop over characters in the input message. */
 
-	/* Rachet back to binary data. */
+	/* Ratchet back to binary data. */
 	if(lastbin && t-lastbin < BINARYHORIZON) {
 		v -= (t-lastbin);
 		t = lastbin;
@@ -155,7 +148,7 @@ add_c:
 	*t = 0; /* null terminate */
 	*v = *u;
 	j_in->len = t - j_in->buf;
-} /* tc_ascify */
+} /* ascify */
 
 
 /*********************************************************************
@@ -258,11 +251,9 @@ retry:
 		of = *u;
 
 		/* Check for hyphenated word */
-		if(c == '\r' && d == '-' && isalnum(t[-2]) &&
+		if(c == ' ' && d == '-' && isalnum(t[-2]) &&
 		isalpha(e) && isalpha(s[2])) {
 			if(isalpha(t[-2])) --t, --v;
-			/* You're not going to hear the return click. */
-			/* Is this a problem?  How do we fix it? */
 			continue;
 		}
 
@@ -281,13 +272,13 @@ retry:
 			goto add_c;
 		} /* tab */
 
-		if(c == '\r' || c == '\f') {
+		if((c == '\n' || c == '\f') && !of) {
 			if(d == '\t') d = ' ';
 			if(d == ' ') --t, --v;
 			for(q=t-1; (e = *q); --q) {
 				if(isalnum(e)) goto add_c;
 				if(e&0x80) goto add_c;
-				if(e == '\f' || e == '\r') break;
+				if(e == '\f' || e == '\n') break;
 				if(e != ' ' && e != '\t' &&
 				readLiteral) goto add_c;
 			}
@@ -299,9 +290,7 @@ retry:
 			t = q;
 			d = t[-1];
 			if(d == '\r') t[-1] = d = '\f';
-#ifndef __KERNEL__
 			if(!d || d == '\f') continue;
-#endif
 			goto add_c;
 		} /* cr or formfeed */
 
