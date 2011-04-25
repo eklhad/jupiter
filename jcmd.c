@@ -395,13 +395,20 @@ readNextPart(void)
 int gsprop;
 int i;
 char *end; /* the end of the sentence */
-char first;
+char first; /* first character of the sentence */
 
 acs_refresh(); /* whether we need to or not */
 
-if(readNextMark)
+if(readNextMark) {
+/* could be past the buffer */
+if(readNextMark >= rb->end) {
+readNextMark = 0;
+reading = 0;
+return;
+}
 rb->cursor = readNextMark;
 readNextMark = 0;
+}
 
 if(!rb->cursor) {
 /* lots of text has pushed the reading cursor off the edge. */
@@ -425,7 +432,6 @@ acs_getsentence(j_in->buf+1, 120, j_in->offset+1, gsprop);
 if(!j_in->buf[1]) {
 /* Empty sentence, nothing else to read. */
 reading = 0;
-readNextMark = 0;
 return;
 }
 
@@ -442,10 +448,8 @@ rb->cursor += j_in->offset[i];
 if(rb->cursor >= rb->end) {
 rb->cursor = rb->end-1;
 reading = 0;
-readNextMark = 0;
 return;
 }
-
 /* The following line is bad if there are ten thousand bells, no way to interrupt */
 /* I'll deal with that case later. */
 goto top;

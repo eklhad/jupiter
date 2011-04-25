@@ -1371,7 +1371,7 @@ static int expandCode(const char **sp)
 		/* We wouldn't be here unless readLiteral were 1 */
 		c = *start++;
 		if(c == ' ') c = 0;
-		if(c == '\r') c = SP_MARK;
+		if(c == '\n') c = SP_MARK;
 		speakChar(c, 0, 0);
 		if(appendString(shortPhrase)) goto overflow;
 		if(appendString(ow->lengthWord)) goto overflow;
@@ -1476,16 +1476,16 @@ code_date:
 		t = end;
 		if(*t) ++t;
 		c = *t;
-		if(c == ' ' || c == '\r') c = *++t;
+		if(c == ' ' || c == '\n') c = *++t;
 		if(c == '-') c = *++t;
-		if(c == ' ' || c == '\r') c = *++t;
+		if(c == ' ' || c == '\n') c = *++t;
 		if(c == SP_MARK && t[1] == SP_DATE) goto code_date;
 		if(c == SP_MARK && t[1] == SP_FRAC) { code = SP_FRAC; goto code_frac; }
 		t = start-3;
 		c = *t;
-		if(c == ' ' || c == '\r') c = *--t;
+		if(c == ' ' || c == '\n') c = *--t;
 		if(c == '-') c = *--t;
-		if(c == ' ' || c == '\r') c = *--t;
+		if(c == ' ' || c == '\n') c = *--t;
 		if(c == SP_MARK) {
 			c = *--t;
 			while(c && c != SP_MARK) c = *--t;
@@ -1863,7 +1863,7 @@ money:
 			if(isdigit(*q)) i = 10*i + *q++ - '0';
 		} /* .xx after the number */
 		e = *q;
-		if(e == '\r' || e == ' ' || e == '-')
+		if(e == '\n' || e == ' ' || e == '-')
 			e = *++q;
 		if(isalpha(e)) {
 			/* look for the word million */
@@ -2538,18 +2538,13 @@ static void expandSentence(void)
 		if(c == '\t' && !oneSymbol) c = ' ';
 		if(c == ' ') goto nextchar;
 		carryOffsetForward(s);
-		if(c == '\r' || c == '\7') {
+		if(c == '\n' || c == '\7') {
 passThrough:
 			if(appendChar(c)) goto overflow;
 			goto nextchar;
 		} /* physical newline or bell */
 
 		if(c == '\f' && !oneSymbol) {
-#ifdef __KERNEL__
-			/* paragraphs don't mean anything when reading
-			 * inside Jupiter-speak */
-			c = '\r';
-#endif
 			goto passThrough;
 		} /* formfeed */
 

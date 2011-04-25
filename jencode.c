@@ -13,11 +13,9 @@ as articulated by the Free Software Foundation.
 
 
 /*********************************************************************
-Turn null into '\r'.
+Turn null into '\n'.
 
-Turn isolated '\n' into '\r'.
-
-Turn "\r\n"into "\r".
+Turn "\r\n"into "\n".
 
 Remove x^H, overstrike character.
 
@@ -61,7 +59,7 @@ void ascify(void)
 
 		if(c == '\b') {
 			d = t[-1];
-			if(d && d != '\f' && d != '\r') --t, --v;
+			if(d && d != '\f' && d != '\n') --t, --v;
 			continue;
 		} /* backspace */
 
@@ -289,10 +287,10 @@ retry:
 			v -= (t-q);
 			t = q;
 			d = t[-1];
-			if(d == '\r') t[-1] = d = '\f';
+			if(d == '\n') t[-1] = d = '\f';
 			if(!d || d == '\f') continue;
 			goto add_c;
-		} /* cr or formfeed */
+		} /* nl or formfeed */
 
 		if(c < ' ') {
 			/* some other control character */
@@ -368,7 +366,7 @@ no_emot:
 
 		/* Check for bullet list item */
 		if((c == '*' || c == '-') &&
-		(d == '\r' || d == '\f')) {
+		(d == '\n' || d == '\f')) {
 			q = s+1;
 			if(e == '-' && e == c) ++q;
 			f = *q;
@@ -402,15 +400,15 @@ skip_encoding:
 			if(e == c) continue;
 			if(e == ' ' && s[2] == c) continue;
 			if(!strchr(".-_=*#", (char)c)) continue;
-			/* Look ahead for '\r' */
+			/* Look ahead for '\n' */
 			for(q=s+1; (e = *q); ++q) {
-				if(e == '\n') e = '\r';
-				if(e == '\f') e = '\r';
-				if(e == '\r') break;
+				if(e == '\r') e = '\n';
+				if(e == '\f') e = '\n';
+				if(e == '\n') break;
 				if(e == '\t') e = ' ';
 				if(e != ' ') break;
 			}
-			if(e == '\r' || !e) {
+			if(e == '\n' || !e) {
 				u += (q-s);
 				s = q;
 				of = *u;
@@ -420,7 +418,7 @@ skip_encoding:
 				goto retry;
 			} /* cr encountered forward */
 			d = t[-3];
-			if(d == '\r') t[-1] = d = '\f';
+			if(d == '\n') t[-1] = d = '\f';
 			if(!d || d == '\f') t -= 2, v -= 2;
 			continue;
 		} /* third instance of c */
@@ -438,10 +436,10 @@ add_c:
 	if(d == ' ' || d == '\t')
 		--t, --v;
 #ifndef __KERNEL__
-	if(d == '\r' || d == '\f')
+	if(d == '\n' || d == '\f')
 		--t, --v;
 #else
-	if(d == '\r') t[-1] = '\f';
+	if(d == '\n') t[-1] = '\f';
 #endif
 
 	*t = 0; /* null terminate */
@@ -503,7 +501,7 @@ if(j_in->len < 100) return;
 			if(c == ',' && isdigit(s[1]) && isdigit(s[-1])) c = ' ';
 			++s, ++u, ++length;
 			if(c <= ' ') {
-				if(c == '\r' || c == '\f') { --length; break; }
+				if(c == '\n' || c == '\f') { --length; break; }
 				continue;
 			}
 			++charcount;
@@ -553,10 +551,8 @@ if(j_in->len < 100) return;
 		if(c == 0 || c == '\f') {
 			if(wasgarbage && t-start_para_t <= PREPOSTGARBAGE) {
 				t = start_para_t, v = start_para_o;
-#ifdef __KERNEL__
-				if(c == '\r')
+				if(c == '\n')
 					*t++ = c, *v++ = of;
-#endif
 			}
 			start_para_t = t, start_para_o = v;
 			wasgarbage = 0;
@@ -618,7 +614,7 @@ static int capLevel(char **lp)
 	int inAddress = 0;
 
 	for(; (c = *s); ++s, lastchar = c) {
-		if(c == '\f' || c == '\r') break;
+		if(c == '\f' || c == '\n') break;
 		if(inAddress) continue;
 		if(length == 120) continue;
 		++length;
@@ -1550,14 +1546,14 @@ static int lineLength(const char *s, const char **begin_p, const char **end_p)
 	int diff;
 
 	for(t=s; (c = *t); ++t) {
-		if(c == '\r') break;
+		if(c == '\n') break;
 		if(c == '\f') break;
 	}
 	end = t;
 	if(end_p) *end_p = end;
 
 	for(t=s-1; (c = *t); --t) {
-		if(c == '\r') break;
+		if(c == '\n') break;
 		if(c == '\f') break;
 	}
 	begin = t;
@@ -1600,7 +1596,7 @@ static int skipDot(const char *s)
 	if(ws == '\f') return 0; /* end of paragraph */
 	c = *++s; /* look ahead */
 	if(isdigit(c)) {
-		if(ws == '\r')return 0;
+		if(ws == '\n')return 0;
 		goto skip;
 	}
 	/* list item logic will determine period or not */
@@ -1610,7 +1606,7 @@ static int skipDot(const char *s)
 	if(!isalpha(c)) goto skip;
 	if(islower(c)) goto skip;
 	/* Next word is upper case, decide based on lines */
-	if(ws != '\r') goto skip;
+	if(ws != '\n') goto skip;
 	len1 = lineLength(s-1, 0, 0);
 	if(len1 >= 48) return 0;
 	len2 = lineLength(s, 0, 0);
@@ -1947,13 +1943,13 @@ doDate:
 				/*is it 1 half inch or 1 half inches??? */
 				iscap = 1; /* try 1 half inch */
 				/* but it would read 3 and 1 half inches */
-				if(c == ' ' || c == '\r') c = *--q;
+				if(c == ' ' || c == '\n') c = *--q;
 				if(c == '-') c = *--q;
-				if(c == ' ' || c == '\r') c = *--q;
+				if(c == ' ' || c == '\n') c = *--q;
 				if(isdigit(c)) iscap = 0; /* back to plural */
 			} /* fraction */
 			if(!iscap) {
-				if(c == ' ' || c == '\r') c = *--q;
+				if(c == ' ' || c == '\n') c = *--q;
 				if(isalpha(c)) {
 					i = 1;
 					while(isalpha(q[-1])) --q, ++i;
@@ -2166,7 +2162,7 @@ q = s-2;
 			if(c == '.') c = *++q;
 			if(c == ' ') c = *++q;
 			if(c == ',') c = *++q;
-			if(c == ' ' || c == '\r') c = *++q;
+			if(c == ' ' || c == '\n') c = *++q;
 			if(isalnum(c)) {
 				i = j = 0;
 				do {
@@ -2222,7 +2218,7 @@ if(r->abbrev&4 && !(postzip|precomma)) precity = 0;
 			/* look ahead for the chapter/verse */
 			q = s + length;
 			c = *q;
-			if(c == ' ' || c == '\r') c = *++q;
+			if(c == ' ' || c == '\n') c = *++q;
 			if(!isdigit(c)) continue;
 			i = 0;
 			while(isdigit(c)) { year = 10*year + c - '0'; c = *++q; ++i; }
@@ -2383,7 +2379,7 @@ if(day2) { /* 3/4 is more likely a fraction than march 4 */
 		 * number, such as 3 1/2 feet tall. */
 		t = j_out->buf + j_out->len - 1;
 		c = *t;
-		if(c == ' ' || c == '\r') c = *--t;
+		if(c == ' ' || c == '\n') c = *--t;
 		if(c == '-') c = *--t;
 		if(c == ' ') c = *--t;
 		if(isdigit(c)) {
@@ -2578,7 +2574,7 @@ phoneCheck:
 	if(!c) goto done;
 	if(!strchr("- \r.)]}>/", (char)c)) goto done;
 	c = *++s;
-	if((c == ' ' || c == '\r') && !strchr("./", (char)s[-1]))
+	if((c == ' ' || c == '\n') && !strchr("./", (char)s[-1]))
 		c = *++s;
 
 	/* determine size of second block */
@@ -2739,7 +2735,7 @@ copy:
 			if(appendChar(c)) goto overflow;
 			++s;
 			if(c == '\f') break;
-			if(c == '\r') break;
+			if(c == '\n') break;
 		} /* loop copying this line */
 
 		/* revert to comma for a short item */
@@ -2828,7 +2824,7 @@ void doEncode(void)
 		/* Sentence boundaries not based on .:!? */
 		/* Of course formfeed always ends the sentence. */
 		if(c == '\f' && markSentence()) goto overflow;
-		if(c != '\r') goto start_c;
+		if(c != '\n') goto start_c;
 		/* Since this is cr, not ff, there should be
 		 * text on either side, specifically non-whitespace
 		 * text.  Let's make sure though. */
@@ -3020,7 +3016,7 @@ if(rc >= 0) {
 		if(e == '\f') goto add_c;
 		spaces = 0; /* quiet gcc warning */
 		if(e == ' ') spaces = 1;
-		if(e == '\r') spaces = 2;
+		if(e == '\n') spaces = 2;
 		if(e == '\t') spaces = 3;
 		e = *++t;
 		if(c == ':') {
