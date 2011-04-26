@@ -2764,11 +2764,11 @@ static int markSentence(void)
 {
 	char *t = j_out->buf + j_out->len - 1;
 	char c = *t;
+if(readLiteral) return 0;
 	while(c == ' ' || c == '\t') c = *--t;
 	if(!c) return 0;
 	if(isspace(c)) return 0;
-	if(!readLiteral &&
-	!strchr(".?!", (char)c) &&
+	if(!strchr(".?!", c) &&
 	appendChar('.')) return 1;
 	return appendChar('\n');
 } /* markSentence */

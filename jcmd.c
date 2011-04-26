@@ -441,6 +441,11 @@ if(first == '\n' || first == '\7') {
 /* This will swoop/beep with clicks on, or say the word newline or bell with clicks off */
 speakChar(j_in->buf[1], 1, 0);
 
+if(oneLine && first == '\n') {
+reading = 0;
+return;
+}
+
 /* Find the next token/offset, which should be the next character */
 for(i=2; !j_in->offset[i]; ++i)  ;
 rb->cursor += j_in->offset[i];
@@ -450,6 +455,7 @@ rb->cursor = rb->end-1;
 reading = 0;
 return;
 }
+
 /* The following line is bad if there are ten thousand bells, no way to interrupt */
 /* I'll deal with that case later. */
 goto top;
@@ -479,11 +485,27 @@ if(!end)
 end = j_out->buf+1 + strlen(j_out->buf+1);
 *end = 0;
 j_out->len = end - j_out->buf;
+
+/* An artificial newline, inserted by prepTTS to denote a sentence boundary,
+ * won't have an offset.  In that case we need to grab the next one. */
+i = j_out->len;
+while(!j_out->offset[i]) ++i;
+j_out->offset[j_out->len] = j_out->offset[i];
+
 readNextMark = rb->cursor + j_out->offset[j_out->len];
 ss_say_string_imarks(j_out->buf+1, j_out->offset+1, 1);
-reading = 0; /* temporary */
-readNextMark = 0;
 } /* readNextPart */
+
+/* index mark handler, read next sentence if we finished the last one */
+static void imark_h(int mark)
+{
+/* Not sure how we would get here if we weren't reading, but just in case */
+if(!reading) return;
+if(ss_stillTalking()) return;
+/* queue the next sentence */
+readNextPart();
+}
+
 
 /*********************************************************************
 Execute the speech command.
@@ -645,6 +667,8 @@ startread:
 acs_startword();
 		acs_cursorsync();
 reading = 1;
+/* start at the cursor, not at some leftover nextMark */
+readNextMark = 0;
 readNextPart();
 		return; /* has to be the end of the composite */
 
@@ -933,6 +957,7 @@ exit(1);
 acs_key_h = key_h;
 acs_fgc_h = fgc_h;
 acs_more_h = more_h;
+ss_imark_h = imark_h;
 
 // this has to run after the device is open,
 // because it sends "key capture" commands to the acsint driver
