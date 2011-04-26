@@ -7,8 +7,6 @@ This software may be freely distributed under the GPL, general public license,
 as articulated by the Free Software Foundation.
 *********************************************************************/
 
-#include <stdio.h>
-
 #include "jup.h"
 
 

@@ -15,7 +15,6 @@ In practice the output buffer is large enough to handle any
 reasonably sized sentence.
 *********************************************************************/
 
-#include <stdlib.h>
 #include <time.h>
 #include <malloc.h>
 
@@ -952,7 +951,7 @@ caw>cel cen cob cod cog com con coo cop \
 cor cot cow coy cry cub cud^cum>cup cus \
 cut cuz^", "\
 dab dad dam dan dat>dax^day deb dec ded>\
-dee>def>del den deo>det dev dew dib did^\
+dee>def>del den deo>det dev dew dib did \
 die dig dim din dip dis>dob>doc>doe>dog \
 dom>don dos dot dry dub>dud^due dug duh>\
 dum>dun duo^dye ", "\
@@ -1042,10 +1041,10 @@ zip zit>zoo "
 static int isWord3(const char *w)
 {
 	const char *s = w;
-	char c1 = tolower(*s);
+	char c1 = tolower(s[0]);
 	char c2 = tolower(s[1]);
 	char c3 = tolower(s[2]);
-	unsigned char lowbit = islower(s[0]) | islower(s[1]) | islower(s[2]);
+	int lowbit = islower(s[0]) | islower(s[1]) | islower(s[2]);
 	short i;
 
 	for(s = realWords3[charDowngrade[(unsigned char)c1]-'a']; *s; s+=4) {

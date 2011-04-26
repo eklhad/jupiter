@@ -12,6 +12,9 @@ as articulated by the Free Software Foundation.
 #define JUP_H 1
 
 #include <string.h>
+#include <ctype.h>
+#include <stdio.h>
+#include <stdlib.h>
 
 #include "acsbridge.h"
 

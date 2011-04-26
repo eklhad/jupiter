@@ -7,9 +7,6 @@ This software may be freely distributed under the GPL, general public license,
 as articulated by the Free Software Foundation.
 *********************************************************************/
 
-#include <stdio.h>
-#include <stdlib.h>
-
 #include "jup.h"
 
 
@@ -462,13 +459,30 @@ goto top;
 }
 
 j_in->len = 1 + strlen(j_in->buf+1);
+/* If the sentence runs all the way to the end of the buffer,
+ * then we might be in the middle of printing a word.
+ * We don't want to read half the word, then come back and refresh
+ * and read the other half.  So back up to the beginning of the word. */
+end = j_in->buf + j_in->len - 1;
+if(!isspace(*end)) {
+for(--end; *end; --end)
+if(isspace(*end)) break;
+if(*end++ && j_in->offset[end-j_in->buf]) {
+*end = 0;
+j_in->len = end - j_in->buf;
+}
+}
+
 #if 0
+puts(j_in->buf+1);
 /* show offsets as returned by getsentence() */
 for(i=1; i<=j_in->len; ++i)
 if(j_in->offset[i])
 printf("%d=%d\n", i, j_in->offset[i]);
 #endif
+
 prepTTS();
+
 #if 0
 puts(j_out->buf+1);
 /* show offsets after prepTTS */
