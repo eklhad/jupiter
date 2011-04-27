@@ -851,7 +851,7 @@ acs_notes(startsnd);
 } /* openSound */
 
 static void
-testTTS(int n)
+testTTS(int n, const char *config)
 {
 char line[400];
 
@@ -860,17 +860,46 @@ readLiteral = n;
 /* This doesn't go through the normal acs_open() process */
 acs_reset_configure();
 /* key bindings don't matter here, but let's load our pronunciations */
-j_configure("jup.cfg");
+j_configure(config);
 
 while(fgets(line, sizeof(line), stdin))
 puts(prepTTSmsg(line));
 
 exit(0);
 } /* testTTS */
+
+/* Supported synthesizers */
+struct synth {
+const char *name;
+int style;
+const char *initstring;
+} synths[] = {
+{"dbe", SS_STYLE_DOUBLE,
+"\1@ \0012b \00126g \0012o \00194i "},
+{"dte", SS_STYLE_DECEXP},
+{"dtp", SS_STYLE_DECPC},
+{"bns", SS_STYLE_BNS},
+{"ace", SS_STYLE_ACE},
+{0, 0}};
+
+static void
+usage(void)
+{
+fprintf(stderr, "usage:  jupiter [-d] [-c configfile] synthesizer port\n");
+fprintf(stderr, "Synthesizer is: dbe = doubletalk external,\n");
+fprintf(stderr, "dte = dectalk external, dtp = dectalk pc,\n");
+fprintf(stderr, "bns = braille n speak, ace = accent.\n");
+fprintf(stderr, "port is 0 1 2 or 3, for the serial device.\n");
+exit(1);
+}
+
 int
 main(int argc, char **argv)
 {
+int i, port;
 ++argv, --argc;
+const char *config = "jup.cfg";
+char serialdev[20];
 
 /* this has to be done first */
 acs_lang = LANG_ENGLISH;
@@ -885,11 +914,31 @@ acs_debug = 1;
 ++argv, --argc;
 }
 
+if(argc && stringEqual(argv[0], "-c")) {
+++argv, --argc;
+if(argc) {
+config = argv[0];
+++argv, --argc;
+}
+}
+
 if(argc && stringEqual(argv[0], "tts"))
-testTTS(0);
+testTTS(0, config);
 
 if(argc && stringEqual(argv[0], "ltts"))
-testTTS(1);
+testTTS(1, config);
+
+if(argc != 2) usage();
+for(i=0; synths[i].name; ++i)
+if(stringEqual(synths[i].name, argv[0])) break;
+if(!synths[i].name) usage();
+ss_style = synths[i].style;
+ss_startvalues();
+++argv, --argc;
+
+port = atoi(argv[0]);
+if(port < 0 || port > 3) usage();
+sprintf(serialdev, "/dev/ttyS%d", port);
 
 if(acs_open("/dev/acsint") < 0) {
 fprintf(stderr, "cannot open the driver /dev/acsint;\n\
@@ -907,22 +956,18 @@ ss_imark_h = imark_h;
 
 // this has to run after the device is open,
 // because it sends "key capture" commands to the acsint driver
-j_configure("jup.cfg");
+j_configure(config);
 
-/* only doubletalk for now; this should come from argv */
-ss_style = SS_STYLE_DOUBLE;
-ss_startvalues();
-
-if(ess_open("/dev/ttyS2", 9600)) {
-fprintf(stderr, "Cannot open serial port %d\n", 2);
+if(ess_open(serialdev, 9600)) {
+fprintf(stderr, "Cannot open serial device %s\n", serialdev);
 exit(1);
 }
 
 openSound();
 
-/* Initialize the doubletalk. */
-/* I don't even remember what these do any more. */
-ss_say_string("\1@ \0012b \00126g \0012o \00194i ");
+/* Initialize the synthesizer. */
+if(synths[i].initstring)
+ss_say_string(synths[i].initstring);
 
 /* Adjust rate and voice, then greet. */
 ss_setvoice(3);
@@ -930,7 +975,7 @@ ss_setspeed(9);
 ss_say_string("jupiter ready");
 
 // This runs forever, you have to hit interrupt to kill it,
-// or kill it from another tty.
+// or kill it from another console.
 while(1) {
 acs_ss_events();
 
