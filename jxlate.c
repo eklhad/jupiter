@@ -119,6 +119,7 @@ const char *locUnder;
 const char *fileUnder;
 const char *pageUnder;
 const char *flowInto[12];
+const char *natoWords[26];
 };
 
 static const struct OUTWORDS outwords[3] = {
@@ -222,6 +223,11 @@ static const struct OUTWORDS outwords[3] = {
 "F T P site", "goapher server"},
 "a location under", "a file under", "a web page under",
 {"site", "at", "from", "to", "on", "visit", "is", 0},
+{"alpha", "brohvo", "charlie", "delta", "eko",
+"foxtrot", "gawlf", "hotell", "india", "juleyet",
+"killo", "liema", "mike", "noavember", "oscar",
+"popa", "kebeck", "romeo", "seeara", "tango",
+"uniform", "victor", "wiskey", "x ray", "yangkey", "zoolu"},
 
 },{ /* Spanish */
 
@@ -256,6 +262,80 @@ sortReservedWords();
 
 return 0;
 } /* setupTTS */
+
+
+/* speak a single character.
+ * Or write, into shortPhrase, how it should be pronounced.
+* sayit means speak the character now.
+ * bellsound means newline and bell make sounds, rather than speaking words.
+ * asword means a letter is spoken using the nato phonetic alphabet,
+ * thus making it clear whether it is m or n. */
+void speakChar(int c, int sayit, int bellsound, int asword)
+{
+	short i;
+	const char *t;
+	static char ctrlstr[] = "controal x";
+
+	if(c == '\7') {
+		if(bellsound) { acs_bell(); return; }
+		t = "bell";
+		goto copy_t;
+	}
+
+	if(c == '\r') {
+		t = "return";
+		goto copy_t;
+	}
+
+	if(c == '\n') {
+		if(bellsound) { acs_cr(); return; }
+		t = "line";
+		goto copy_t;
+	}
+
+	if(c == '\t') {
+		t = "tab";
+		goto copy_t;
+	}
+
+	if(c < 27) {
+		ctrlstr[9] = c|0x40;
+		t = ctrlstr;
+
+copy_t:
+		strcpy((char*)shortPhrase, t);
+		if(sayit) ss_say_string(shortPhrase);
+		return;
+	} /* control character */
+
+top:
+t = (char*)acs_getpunc(c);
+if(t) goto copy_t;
+
+if(c >= 256) {
+/* We are past getpunc(), guess we don't know how to say this unicode. */
+c = '?';
+goto top;
+}
+
+		if(!isalnum(c)) {
+			static char nonascii[] = "bite x x";
+			static const char almostHex[] = "0123456789xqcdlf";
+			nonascii[5] = almostHex[c>>4];
+			nonascii[7] = almostHex[c&15];
+			t =  nonascii;
+		goto copy_t;
+	}
+
+/* now a letter or digit */
+c = tolower(c);
+if(isalpha(c) && asword) {
+t = ow->natoWords[c-'a'];
+goto copy_t;
+}
+
+	if(sayit) ss_say_char(c);
+} /* speakChar */
 
 
 /*********************************************************************
@@ -1371,7 +1451,7 @@ static int expandCode(const char **sp)
 		c = *start++;
 		if(c == ' ') c = 0;
 		if(c == '\n') c = SP_MARK;
-		speakChar(c, 0, 0);
+		speakChar(c, 0, 0, 0);
 		if(appendString(shortPhrase)) goto overflow;
 		if(appendString(ow->lengthWord)) goto overflow;
 		if(append6num(strtol(start, 0, 10))) goto overflow;
@@ -1398,7 +1478,7 @@ static int expandCode(const char **sp)
 		if(!readLiteral) {
 			if(appendIchar(*t)) goto overflow;
 		} else {
-			speakChar(c, 0, 0);
+			speakChar(c, 0, 0, 0);
 				if(appendString(shortPhrase)) goto overflow;
 		}
 		break;
@@ -2162,7 +2242,7 @@ static int expandPunct(const char **sp)
 		/* Here are the exceptions */
 		if(oneSymbol || !strchr(".^$", (char)c)) {
 do_punct:
-			speakChar(c, 0, 0);
+			speakChar(c, 0, 0, 0);
 				if(appendString(shortPhrase)) goto overflow;
 			goto success;
 		}

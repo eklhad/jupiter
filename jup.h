@@ -74,9 +74,6 @@ extern char shortPhrase[NEWWORDLEN];
 
 /* prototypes */
 
-/* sourcefile=jcmd.c */
-void speakChar(int c, int sayit, int asword) ;
-
 /* sourcefile=jencode.c */
 void ascify(void) ;
 void doWhitespace(void) ;
@@ -88,6 +85,7 @@ void doEncode(void) ;
 
 /* sourcefile=jxlate.c */
 int setupTTS(void) ;
+void speakChar(int c, int sayit, int bellsound, int asword) ;
 void textBufSwitch(void) ;
 void carryOffsetForward(const char *s) ;
 void textbufClose(const char *s, int overflow) ;

@@ -274,104 +274,6 @@ break;
 } // switch
 } /* binmode */
 
-/* speak a single character */
-void speakChar(int c, int sayit, int asword)
-{
-	short i;
-	const char *t;
-	static char ctrlstr[] = "controal x";
-	static const char * const wfl[] = {
-"al fa",
-"brohvo",
-"charlie",
-"delta",
-"eko",
-"foxtrot",
-"gawlf",
-"hotell",
-"india",
-"juleyet",
-"killo",
-"liema",
-"mike",
-"noavember",
-"oscar",
-"popa",
-"kebeck",
-"romeo",
-"seeara",
-"tango",
-"uniform",
-"victor",
-"wiskey",
-"x ray",
-"yangkey",
-"zoolu",
-};
-
-	if(c == '\7') {
-		if(clicksOn) { acs_bell(); return; }
-		t = "bell";
-		goto copy_t;
-	}
-
-	if(c == '\r') {
-		t = "return";
-		goto copy_t;
-	}
-
-	if(c == '\n') {
-		if(clicksOn) { acs_cr(); return; }
-		if(reading) return;
-		t = "line";
-		goto copy_t;
-	}
-
-	if(c == '\t') {
-		t = "tab";
-		goto copy_t;
-	}
-
-	if(c < 27) {
-		ctrlstr[9] = c|0x40;
-		t = ctrlstr;
-
-copy_t:
-		strcpy((char*)shortPhrase, t);
-		if(sayit) ss_say_string(shortPhrase);
-		return;
-	} /* control character */
-
-top:
-t = (char*)acs_getpunc(c);
-if(t) goto copy_t;
-
-if(c >= 256) {
-/* We are past getpunc(), guess we don't know how to say this unicode. */
-c = '?';
-goto top;
-}
-
-		if(!isalnum(c)) {
-			static char nonascii[] = "bite x x";
-			static const char almostHex[] = "0123456789xqcdlf";
-			nonascii[5] = almostHex[c>>4];
-			nonascii[7] = almostHex[c&15];
-			t =  nonascii;
-		goto copy_t;
-	}
-
-/* now a letter or digit */
-c = tolower(c);
-if(isalpha(c) && asword) {
-t = wfl[c-'a'];
-goto copy_t;
-}
-
-	if(sayit) ss_say_char(c);
-} /* speakChar */
-
-
 /*********************************************************************
 An event is interrupting speech.
 Key command, echoed character, console switch.
@@ -436,7 +338,7 @@ first = j_in->buf[1];
 if(first == '\n' || first == '\7') {
 /* starts out with newline or bell, which is usually associated with a sound */
 /* This will swoop/beep with clicks on, or say the word newline or bell with clicks off */
-speakChar(j_in->buf[1], 1, 0);
+speakChar(j_in->buf[1], 1, clicksOn, 0);
 
 if(oneLine && first == '\n') {
 reading = 0;
@@ -511,7 +413,7 @@ ss_say_string_imarks(j_out->buf+1, j_out->offset+1, 1);
 } /* readNextPart */
 
 /* index mark handler, read next sentence if we finished the last one */
-static void imark_h(int mark)
+static void imark_h(int mark, int lastmark)
 {
 /* Not sure how we would get here if we weren't reading, but just in case */
 if(!reading) return;
@@ -630,7 +532,7 @@ acs_endline();
 	case 16:
 letter:
 acs_cursorsync();
-		speakChar(acs_getc_uc(), 1, asword);
+		speakChar(acs_getc_uc(), 1, clicksOn, asword);
 		break;
 
 	case 17: /* indicate case */
@@ -899,7 +801,7 @@ static void more_h(int echo, unsigned int c)
 {
 if(echoMode && echo == 1 && c < 256 && isprint(c)) {
 interrupt();
-speakChar(c, 1, 0);
+speakChar(c, 1, clicksOn, 0);
 }
 } /* more_h */
 
