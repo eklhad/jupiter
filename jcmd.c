@@ -295,6 +295,7 @@ int gsprop;
 int i;
 char *end; /* the end of the sentence */
 char first; /* first character of the sentence */
+static int flip = 1; /* flip between two ranges of numbers */
 
 acs_refresh(); /* whether we need to or not */
 
@@ -409,7 +410,8 @@ while(!j_out->offset[i]) ++i;
 j_out->offset[j_out->len] = j_out->offset[i];
 
 readNextMark = rb->cursor + j_out->offset[j_out->len];
-ss_say_string_imarks(j_out->buf+1, j_out->offset+1, 1);
+flip = 51 - flip;
+ss_say_string_imarks(j_out->buf+1, j_out->offset+1, flip);
 } /* readNextPart */
 
 /* index mark handler, read next sentence if we finished the last one */
@@ -417,8 +419,8 @@ static void imark_h(int mark, int lastmark)
 {
 /* Not sure how we would get here if we weren't reading, but just in case */
 if(!reading) return;
-if(ss_stillTalking()) return;
-/* queue the next sentence */
+
+if(mark == lastmark)
 readNextPart();
 }
 
@@ -803,6 +805,33 @@ if(echoMode && echo == 1 && c < 256 && isprint(c)) {
 interrupt();
 speakChar(c, 1, clicksOn, 0);
 }
+
+if(reading) return;
+if(!autoRead) return;
+
+if(echo) {
+/* don't what to autoread what we typed in, so refresh, and bring it
+ * back into the buffer, so when autoread does begin
+ * we are reading the new stuff. */
+acs_refresh();
+return;
+}
+
+/* fetch the new stuff and start reading */
+/* Pause, to allow for some characters to print, especially if clicks are on. */
+usleep(clicksOn ? 300000 : 30000);
+readNextMark = rb->end;
+acs_refresh();
+if(!readNextMark) return;
+while(c = *readNextMark) {
+if(c != ' ' && c != '\n' && c != '\7')
+break;
+++readNextMark;
+}
+if(!c) return;
+
+reading = 1;
+readNextPart();
 } /* more_h */
 
 static void
@@ -895,7 +924,7 @@ openSound();
 ss_say_string("\1@ \0012b \00126g \0012o \00194i ");
 
 /* Adjust rate and voice, then greet. */
-ss_setvoice(7);
+ss_setvoice(3);
 ss_setspeed(9);
 ss_say_string("jupiter ready");
 
