@@ -824,7 +824,8 @@ readNextMark = rb->end;
 acs_refresh();
 if(!readNextMark) return;
 while(c = *readNextMark) {
-if(c != ' ' && c != '\n' && c != '\7')
+if(c != ' ' && c != '\n' &&
+c != '\r' && c != '\7')
 break;
 ++readNextMark;
 }
