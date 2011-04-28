@@ -926,6 +926,8 @@ fprintf(stderr, "Could not malloc space for text preprocessing buffers.\n");
 exit(1);
 }
 
+relativeDate = 1;
+
 if(argc && stringEqual(argv[0], "-d")) {
 acs_debug = 1;
 ++argv, --argc;
