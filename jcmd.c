@@ -44,7 +44,7 @@ static const struct cmd speechcommands[] = {
 	{"reed the current word","word",1,1},
 	{"start reeding","read",1,1},
 	{"stop speaking","shutup"},
-	{"pass next karecter threw","bypass",0,1,1},
+	{"pass next karecter through","bypass",0,1,1},
 	{"clear bighnary mode","clmode",0,0,1},
 	{"set bighnary mode","stmode",0,0,1},
 	{"toggle bighnary mode","toggle",0,0,1},
@@ -67,6 +67,7 @@ static const struct cmd speechcommands[] = {
 {"set echo", "echo", 0, 0, 1},
 {"label", "label", 1, 0, 1},
 {"jump", "jump", 1, 0, 1},
+	{"restart the adapter","reexec",0,1},
 	{0,""}
 };
 
@@ -101,6 +102,7 @@ compStatus(int cmd)
 	/* Follow-on string always ends the composite. */
 	if(cmdp->nextline) compstat |= 1;
 	if(cmd == 22) compstat = 5; /* bypass */
+	if(cmd == 45) compstat = 5; /* reexec */
 	return compstat;
 } // compStatus
 
@@ -219,8 +221,9 @@ For instance, ^G beep if the character doesn't correspond
 to a boolean mode in the system.
 *********************************************************************/
 
+static char **argvector;
 static char clicksOn = 1; // clicks accompany tty output
-static char autoRead; // read new text automatically
+static char autoRead = 1; // read new text automatically
 static char oneLine; /* read one line at a time */
 static char transparent; // pass through
 static char overrideSignals = 0; // don't rely on cts rts etc
@@ -410,7 +413,7 @@ while(!j_out->offset[i]) ++i;
 j_out->offset[j_out->len] = j_out->offset[i];
 
 readNextMark = rb->cursor + j_out->offset[j_out->len];
-flip = 51 - flip;
+//flip = 51 - flip;
 ss_say_string_imarks(j_out->buf+1, j_out->offset+1, flip);
 } /* readNextPart */
 
@@ -753,6 +756,17 @@ acs_cursorset();
 if(!quiet) acs_tone_onoff(0);
 break;
 
+case 45: /* reexec */
+acs_buzz();
+ss_close();
+acs_close();
+usleep(700000);
+/* We should really capture the absolute path of the running program,
+ * and feed it to execv.  Not sure how to do that,
+ * so I'm just using execvp instead.
+ * Hope it gloms onto the correct executable. */
+execvp("jupiter", argvector);
+
 	default:
 	error_bell:
 		acs_bell();
@@ -897,9 +911,12 @@ int
 main(int argc, char **argv)
 {
 int i, port;
-++argv, --argc;
 const char *config = "jup.cfg";
 char serialdev[20];
+
+/* remember the arg vector, before we start marching along. */
+argvector = argv;
+++argv, --argc;
 
 /* this has to be done first */
 acs_lang = LANG_ENGLISH;
