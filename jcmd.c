@@ -44,7 +44,7 @@ static const struct cmd speechcommands[] = {
 	{"reed the current word","word",1,1},
 	{"start reeding","read",1,1},
 	{"stop speaking","shutup"},
-	{"pass next karecter through","bypass",0,1,1},
+	{"pass next karecter through","bypass",0,1},
 	{"clear bighnary mode","clmode",0,0,1},
 	{"set bighnary mode","stmode",0,0,1},
 	{"toggle bighnary mode","toggle",0,0,1},
