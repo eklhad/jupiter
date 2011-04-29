@@ -7,6 +7,10 @@ This software may be freely distributed under the GPL, general public license,
 as articulated by the Free Software Foundation.
 *********************************************************************/
 
+#include <fcntl.h>
+#include <iconv.h>
+#include <wchar.h>
+
 #include "jup.h"
 
 
@@ -48,8 +52,8 @@ static const struct cmd speechcommands[] = {
 	{"clear bighnary mode","clmode",0,0,1},
 	{"set bighnary mode","stmode",0,0,1},
 	{"toggle bighnary mode","toggle",0,0,1},
-	{"serch up","searchu",1,1,0,1},
-	{"serch down","searchd",1,1,0,1},
+	{"search up","searchu",1,1,0,1},
+	{"search down","searchd",1,1,0,1},
 	{"set volume","volume",0,0,1},
 {"increase volume", "incvol"},
 {"decrease volume", "decvol"},
@@ -68,6 +72,7 @@ static const struct cmd speechcommands[] = {
 {"label", "label", 1, 0, 1},
 {"jump", "jump", 1, 0, 1},
 	{"restart the adapter","reexec",0,1},
+	{"dump buffer","dump",0, 1},
 	{0,""}
 };
 
@@ -429,6 +434,72 @@ readNextPart();
 
 
 /*********************************************************************
+Dump the tty buffer into a file.
+But first we need to convert it from unicode to utf8.
+The conversion routine was provided by Chris Brannon.
+*********************************************************************/
+
+char *
+uni2utf8(const wchar_t * inbuf)
+{
+    size_t nconv;
+    size_t inbuf_l;
+    size_t outbuf_l;
+    char *outbuf;
+    char *outptr;
+    iconv_t *converter;
+    char *inptr = (char *)inbuf;
+
+    inbuf_l = wcslen(inbuf);
+    outbuf_l = inbuf_l * 6 * sizeof (char);
+    inbuf_l *= sizeof (wchar_t);
+/* Need size in bytes for iconv. */
+    outbuf = malloc(outbuf_l + sizeof (char));
+
+    if(!outbuf)
+	return NULL;
+
+    outptr = outbuf;
+    converter = iconv_open("UTF-8", "wchar_t");
+    if(converter == (iconv_t *) - 1) {
+	free(outbuf);
+	return NULL;
+    }
+
+    nconv = iconv(converter, &inptr, &inbuf_l, &outptr, &outbuf_l);
+    if(nconv == (size_t) - 1) {
+	free(outbuf);
+	iconv_close(converter);
+	return NULL;
+    }
+
+    *outptr = '\0';
+/* Liberally overallocated; uncomment to save memory */
+/* outbuf = realloc(outbuf, (outbuf - outptr + 1) * sizeof(char)); */
+    iconv_close(converter);
+    return outbuf;
+}				/* uni2utf8 */
+
+static int dumpBuffer(void)
+{
+int fd, l, n;
+char *utf8 =  uni2utf8((wchar_t*)rb->start);
+if(!utf8) return -1;
+sprintf(shortPhrase, "buf%d", acs_fgc);
+fd = open(shortPhrase, O_WRONLY|O_CREAT|O_TRUNC, 0666);
+if(fd < 0) {
+free(utf8);
+return -1;
+}
+l = strlen(utf8);
+n = write(fd, utf8, l);
+close(fd);
+free(utf8);
+return (n < l ? -1 : 0);
+} /* dumpBuffer */
+
+
+/*********************************************************************
 Execute the speech command.
 The argument is the command list, null-terminated.
 *********************************************************************/
@@ -766,6 +837,13 @@ usleep(700000);
  * so I'm just using execvp instead.
  * Hope it gloms onto the correct executable. */
 execvp("jupiter", argvector);
+
+case 46: /* dump tty buffer to a file */
+if(dumpBuffer()) goto error_bell;
+acs_cr();
+acs_cr();
+acs_cr();
+return;
 
 	default:
 	error_bell:
