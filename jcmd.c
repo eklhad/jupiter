@@ -72,6 +72,7 @@ static const struct cmd speechcommands[] = {
 {"label", "label", 1, 0, 1},
 {"jump", "jump", 1, 0, 1},
 	{"restart the adapter","reexec",0,1},
+	{"reload the config file","reload",0,1},
 	{"dump buffer","dump",0, 1},
 	{0,""}
 };
@@ -169,18 +170,19 @@ last_atom = s;
 	return 0;
 } // cfg_syntax
 
-// configure the jupiter system.
+/* configure the jupiter system. */
+static const char *my_config = "jup.cfg";
 static void
-j_configure(const char *filename)
+j_configure(void)
 {
 FILE *f;
 char line[200];
 char *s;
 int lineno, rc;
 
-f = fopen(filename, "r");
+f = fopen(my_config, "r");
 if(!f) {
-fprintf(stderr, "cannot open config file %s\n", filename);
+fprintf(stderr, "cannot open config file %s\n", my_config);
 return;
 }
 
@@ -195,7 +197,7 @@ if(s > line && s[-1] == '\r') --s;
 *s = 0;
 
 if(rc = acs_line_configure(line, cfg_syntax)) {
-fprintf(stderr, "%s line %d: ", filename, lineno);
+fprintf(stderr, "%s line %d: ", my_config, lineno);
 switch(rc) {
 case -2:
 fprintf(stderr, "%s cannot be in the middle of a composite speech command", last_atom);
@@ -838,7 +840,14 @@ usleep(700000);
  * Hope it gloms onto the correct executable. */
 execvp("jupiter", argvector);
 
-case 46: /* dump tty buffer to a file */
+case 46: /* reload config file */
+acs_cr();
+acs_reset_configure();
+ss_say_string("reload");
+j_configure();
+return;
+
+case 47: /* dump tty buffer to a file */
 if(dumpBuffer()) goto error_bell;
 acs_cr();
 j_in->buf[0] = 0;
@@ -946,16 +955,14 @@ acs_notes(startsnd);
 } /* openSound */
 
 static void
-testTTS(int n, const char *config)
+testTTS(void)
 {
 char line[400];
-
-readLiteral = n;
 
 /* This doesn't go through the normal acs_open() process */
 acs_reset_configure();
 /* key bindings don't matter here, but let's load our pronunciations */
-j_configure(config);
+j_configure();
 
 while(fgets(line, sizeof(line), stdin))
 puts(prepTTSmsg(line));
@@ -992,7 +999,6 @@ int
 main(int argc, char **argv)
 {
 int i, port;
-const char *config = "jup.cfg";
 char serialdev[20];
 
 /* remember the arg vector, before we start marching along. */
@@ -1017,16 +1023,22 @@ acs_debug = 1;
 if(argc && stringEqual(argv[0], "-c")) {
 ++argv, --argc;
 if(argc) {
-config = argv[0];
+my_config = argv[0];
 ++argv, --argc;
 }
 }
 
-if(argc && stringEqual(argv[0], "tts"))
-testTTS(0, config);
+if(argc && stringEqual(argv[0], "tts")) {
+readLiteral = 0;
+testTTS();
+return 0;
+}
 
-if(argc && stringEqual(argv[0], "ltts"))
-testTTS(1, config);
+if(argc && stringEqual(argv[0], "ltts")) {
+readLiteral = 1;
+testTTS();
+return 0;
+}
 
 if(argc != 2) usage();
 for(i=0; synths[i].name; ++i)
@@ -1056,7 +1068,7 @@ ss_imark_h = imark_h;
 
 // this has to run after the device is open,
 // because it sends "key capture" commands to the acsint driver
-j_configure(config);
+j_configure();
 
 if(ess_open(serialdev, 9600)) {
 fprintf(stderr, "Cannot open serial device %s\n", serialdev);
