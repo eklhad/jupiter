@@ -171,7 +171,7 @@ last_atom = s;
 } // cfg_syntax
 
 /* configure the jupiter system. */
-static const char *my_config = "jup.cfg";
+static const char *my_config = "/etc/jupiter.cfg";
 static void
 j_configure(void)
 {
