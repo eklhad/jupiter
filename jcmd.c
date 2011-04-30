@@ -375,9 +375,15 @@ j_in->len = 1 + strlen(j_in->buf+1);
 /* If the sentence runs all the way to the end of the buffer,
  * then we might be in the middle of printing a word.
  * We don't want to read half the word, then come back and refresh
- * and read the other half.  So back up to the beginning of the word. */
+ * and read the other half.  So back up to the beginning of the word.
+ * Nor do we want to hear the word return, when newline is about to follow.
+ * Despite this code, it is still possible to hear part of a word,
+ * or the cr in crlf, if the output is delayed for some reason. */
 end = j_in->buf + j_in->len - 1;
-if(!isspace(*end)) {
+if(*end == '\r') {
+if(j_in->len > 2 && j_in->offset[j_in->len-1])
+*end = 0, --j_in->len;
+} else if(!isspace(*end)) {
 for(--end; *end; --end)
 if(isspace(*end)) break;
 if(*end++ && j_in->offset[end-j_in->buf]) {
