@@ -1451,7 +1451,7 @@ static int expandCode(const char **sp)
 		c = *start++;
 		if(c == ' ') c = 0;
 		if(c == '\n') c = SP_MARK;
-		speakChar(c, 0, 0, 0);
+		speakChar((unsigned char)c, 0, 0, 0);
 		if(appendString(shortPhrase)) goto overflow;
 		if(appendString(ow->lengthWord)) goto overflow;
 		if(append6num(strtol(start, 0, 10))) goto overflow;
@@ -1478,7 +1478,7 @@ static int expandCode(const char **sp)
 		if(!readLiteral) {
 			if(appendIchar(*t)) goto overflow;
 		} else {
-			speakChar(c, 0, 0, 0);
+			speakChar((unsigned char)c, 0, 0, 0);
 				if(appendString(shortPhrase)) goto overflow;
 		}
 		break;
@@ -2242,7 +2242,7 @@ static int expandPunct(const char **sp)
 		/* Here are the exceptions */
 		if(oneSymbol || !strchr(".^$", (char)c)) {
 do_punct:
-			speakChar(c, 0, 0, 0);
+			speakChar((unsigned char)c, 0, 0, 0);
 				if(appendString(shortPhrase)) goto overflow;
 			goto success;
 		}

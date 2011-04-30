@@ -485,7 +485,7 @@ static int dumpBuffer(void)
 int fd, l, n;
 char *utf8 =  uni2utf8((wchar_t*)rb->start);
 if(!utf8) return -1;
-sprintf(shortPhrase, "buf%d", acs_fgc);
+sprintf(shortPhrase, "/tmp/buf%d", acs_fgc);
 fd = open(shortPhrase, O_WRONLY|O_CREAT|O_TRUNC, 0666);
 if(fd < 0) {
 free(utf8);
@@ -841,8 +841,11 @@ execvp("jupiter", argvector);
 case 46: /* dump tty buffer to a file */
 if(dumpBuffer()) goto error_bell;
 acs_cr();
-acs_cr();
-acs_cr();
+j_in->buf[0] = 0;
+sprintf(j_in->buf+1, "buffer %d", acs_fgc);
+		j_in->len = strlen(j_in->buf+1) + 1;
+prepTTS();
+		ss_say_string(j_out->buf+1);
 return;
 
 	default:
