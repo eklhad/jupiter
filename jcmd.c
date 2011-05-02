@@ -638,11 +638,8 @@ return;
 if(!quiet) acs_click();
 		acs_cursorsync();
 		n = acs_startline();
-j_in->buf[0] = 0;
-		sprintf(j_in->buf+1, "%d", n);
-		j_in->len = strlen(j_in->buf+1) + 1;
-prepTTS();
-		ss_say_string(j_out->buf+1);
+		sprintf(shortPhrase, "%d", n);
+		ss_say_string(prepTTSmsg(shortPhrase));
 		return;
 
 	case 19: /* just read one word */
@@ -858,11 +855,8 @@ return;
 case 47: /* dump tty buffer to a file */
 if(dumpBuffer()) goto error_bell;
 acs_cr();
-j_in->buf[0] = 0;
-sprintf(j_in->buf+1, "buffer %d", acs_fgc);
-		j_in->len = strlen(j_in->buf+1) + 1;
-prepTTS();
-		ss_say_string(j_out->buf+1);
+sprintf(shortPhrase, "buffer %d", acs_fgc);
+		ss_say_string(prepTTSmsg(shortPhrase));
 return;
 
 	default:
@@ -904,18 +898,15 @@ last_key = last_ss = 0;
 
 /* stop reading, and speak the new console */
 interrupt();
-j_in->buf[0] = 0;
-sprintf(j_in->buf+1, "console %d", acs_fgc);
-		j_in->len = strlen(j_in->buf+1) + 1;
-prepTTS();
-		ss_say_string(j_out->buf+1);
+sprintf(shortPhrase, "console %d", acs_fgc);
+		ss_say_string(prepTTSmsg(shortPhrase));
 } /* fgc_h */
 
 static void fifo_h(char *msg)
 {
 /* stop reading, and speak the message */
 interrupt();
-ss_say_string(msg);
+ss_say_string(prepTTSmsg(msg));
 free(msg);
 } /* fifo_h */
 
