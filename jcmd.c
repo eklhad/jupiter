@@ -7,6 +7,7 @@ This software may be freely distributed under the GPL, general public license,
 as articulated by the Free Software Foundation.
 *********************************************************************/
 
+#include <errno.h>
 #include <fcntl.h>
 #include <iconv.h>
 #include <wchar.h>
@@ -172,6 +173,7 @@ last_atom = s;
 
 /* configure the jupiter system. */
 static const char *my_config = "/etc/jupiter.cfg";
+static const char *acsdriver = "/dev/acsint";
 static void
 j_configure(void)
 {
@@ -1058,12 +1060,19 @@ port = atoi(argv[0]);
 if(port < 0 || port > 3) usage();
 sprintf(serialdev, "/dev/ttyS%d", port);
 
-if(acs_open("/dev/acsint") < 0) {
-fprintf(stderr, "cannot open the driver /dev/acsint;\n\
-did you make this character special,\n\
+if(acs_open(acsdriver) < 0) {
+printf("%d,%d\n", errno, EBUSY);
+fprintf(stderr, "cannot open the driver %s;\n%s.\n",
+acsdriver, acs_errordesc());
+if(errno == EBUSY) {
+fprintf(stderr, "Acsint can only be opened by one program at a time.\n\
+Another program is currently using the acsint device driver.\n");
+exit(1);
+}
+fprintf(stderr, "Did you make %s character special,\n\
 and do you have permission to read and write it,\n\
 and did you install the acsint module,\n\
-and do you also have permission to read /dev/vcsa?\n");
+and do you also have permission to read /dev/vcsa?\n", acsdriver);
 exit(1);
 }
 
@@ -1088,7 +1097,7 @@ if(synths[i].initstring)
 ss_say_string(synths[i].initstring);
 
 /* Adjust rate and voice, then greet. */
-ss_setvoice(3);
+ss_setvoice(4);
 ss_setspeed(9);
 ss_say_string("jupiter ready");
 
