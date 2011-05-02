@@ -911,6 +911,14 @@ prepTTS();
 		ss_say_string(j_out->buf+1);
 } /* fgc_h */
 
+static void fifo_h(char *msg)
+{
+/* stop reading, and speak the message */
+interrupt();
+ss_say_string(msg);
+free(msg);
+} /* fifo_h */
+
 static void more_h(int echo, unsigned int c)
 {
 if(echoMode && echo == 1 && c < 256 && isprint(c)) {
@@ -1081,6 +1089,7 @@ exit(1);
 acs_key_h = key_h;
 acs_fgc_h = fgc_h;
 acs_more_h = more_h;
+acs_fifo_h = fifo_h;
 ss_imark_h = imark_h;
 
 // this has to run after the device is open,
@@ -1103,8 +1112,10 @@ ss_setvoice(4);
 ss_setspeed(9);
 ss_say_string("jupiter ready");
 
-// This runs forever, you have to hit interrupt to kill it,
-// or kill it from another console.
+acs_startfifo("/etc/jupiter.fifo");
+
+/* This runs forever, you have to hit interrupt to kill it,
+ * or kill it from another console. */
 while(1) {
 acs_ss_events();
 
