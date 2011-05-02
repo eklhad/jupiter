@@ -1061,7 +1061,6 @@ if(port < 0 || port > 3) usage();
 sprintf(serialdev, "/dev/ttyS%d", port);
 
 if(acs_open(acsdriver) < 0) {
-printf("%d,%d\n", errno, EBUSY);
 fprintf(stderr, "cannot open the driver %s;\n%s.\n",
 acsdriver, acs_errordesc());
 if(errno == EBUSY) {
@@ -1069,10 +1068,13 @@ fprintf(stderr, "Acsint can only be opened by one program at a time.\n\
 Another program is currently using the acsint device driver.\n");
 exit(1);
 }
+if(errno == EACCES) {
+fprintf(stderr, "Check the permissions on /dev/vcsa and %s\n", acsdriver);
+exit(1);
+}
 fprintf(stderr, "Did you make %s character special,\n\
-and do you have permission to read and write it,\n\
-and did you install the acsint module,\n\
-and do you also have permission to read /dev/vcsa?\n", acsdriver);
+and did you install the acsint module?\n",
+acsdriver);
 exit(1);
 }
 
