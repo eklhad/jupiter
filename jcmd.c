@@ -1113,20 +1113,9 @@ acs_ss_events();
 if(last_key) {
 char *cmdlist; // the speech command
 int mkcode = acs_build_mkcode(last_key, last_ss);
+last_key = last_ss = 0;
 cmdlist = acs_getspeechcommand(mkcode);
 //There ought to be a speech command, else why were we called?
-// Oh well, let's make sure.
-if(!cmdlist) {
-// Well you might not get it because the shift state is left or right alt,
-// and the command is generic alt.
-// Let's check for that.
-if(last_ss&ACS_SS_ALT) {
-mkcode = acs_build_mkcode(last_key, (last_ss|ACS_SS_ALT));
-cmdlist = acs_getspeechcommand(mkcode);
-}
-}
-last_key = last_ss = 0;
-// Now we ought to have it!
 if(cmdlist) runSpeechCommand(1, cmdlist);
 }
 
