@@ -237,6 +237,7 @@ static char oneLine; /* read one line at a time */
 static char transparent; // pass through
 static char overrideSignals = 0; // don't rely on cts rts etc
 static char reading; /* continuous reading in progress */
+static char goRead; /* read the next sentence */
 /* for cut&paste */
 #define markleft rb->marks[26]
 static unsigned int *markright;
@@ -294,7 +295,8 @@ Stop any reading in progress.
 
 static void interrupt(void)
 {
-reading = oneSymbol = 0;
+reading = 0;
+goRead = 0;
 if(ss_stillTalking()) ss_shutup();
 }
 
@@ -337,12 +339,14 @@ gsprop |= ACS_GS_NLSPACE;
 
 top:
 /* grab something to read */
+acs_log("nextpart 0x%x\n", rb->cursor[0]);
 j_in->buf[0] = 0;
 j_in->offset[0] = 0;
 acs_getsentence(j_in->buf+1, 120, j_in->offset+1, gsprop);
 
 if(!j_in->buf[1]) {
 /* Empty sentence, nothing else to read. */
+acs_log("empty done\n");
 reading = 0;
 return;
 }
@@ -354,6 +358,7 @@ if(first == '\n' || first == '\7') {
 speakChar(j_in->buf[1], 1, clicksOn, 0);
 
 if(oneLine && first == '\n') {
+acs_log("newline done\n");
 reading = 0;
 return;
 }
@@ -364,6 +369,7 @@ rb->cursor += j_in->offset[i];
 /* but don't leave it there if you have run off the end of the buffer */
 if(rb->cursor >= rb->end) {
 rb->cursor = rb->end-1;
+acs_log("eof done\n");
 reading = 0;
 return;
 }
@@ -655,7 +661,9 @@ acs_getsentence(j_in->buf+1, WORDLEN, j_in->offset+1, gsprop);
 		j_in->len = strlen(j_in->buf+1) + 1;
 rb->cursor += j_in->offset[j_in->len] - 1;
 acs_cursorset();
+oneSymbol = 1;
 prepTTS();
+oneSymbol = 0;
 		ss_say_string(j_out->buf+1);
 break;
 
@@ -919,31 +927,9 @@ speakChar(c, 1, clicksOn, 0);
 
 if(reading) return;
 if(!autoRead) return;
+if(echo) return;
 
-if(echo) {
-/* don't what to autoread what we typed in, so refresh, and bring it
- * back into the buffer, so when autoread does begin
- * we are reading the new stuff. */
-acs_refresh();
-return;
-}
-
-/* fetch the new stuff and start reading */
-/* Pause, to allow for some characters to print, especially if clicks are on. */
-usleep(clicksOn ? 300000 : 30000);
-readNextMark = rb->end;
-acs_refresh();
-if(!readNextMark) return;
-while(c = *readNextMark) {
-if(c != ' ' && c != '\n' &&
-c != '\r' && c != '\7')
-break;
-++readNextMark;
-}
-if(!c) return;
-
-reading = 1;
-readNextPart();
+goRead = 1;
 } /* more_h */
 
 static void
@@ -1117,6 +1103,26 @@ last_key = last_ss = 0;
 cmdlist = acs_getspeechcommand(mkcode);
 //There ought to be a speech command, else why were we called?
 if(cmdlist) runSpeechCommand(1, cmdlist);
+}
+
+if(goRead) {
+unsigned int c;
+goRead = 0;
+/* fetch the new stuff and start reading */
+/* Pause, to allow for some characters to print, especially if clicks are on. */
+usleep(clicksOn ? 250000 : 25000);
+readNextMark = rb->end;
+acs_refresh();
+if(!readNextMark) continue;
+while(c = *readNextMark) {
+if(c != ' ' && c != '\n' &&
+c != '\r' && c != '\7')
+break;
+++readNextMark;
+}
+if(!c) continue;
+reading = 1;
+readNextPart();
 }
 
 }
