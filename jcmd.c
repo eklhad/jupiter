@@ -518,7 +518,7 @@ static void runSpeechCommand(int input, const char *cmdlist)
 {
 	const struct cmd *cmdp;
 	char suptext[256]; /* supporting text */
-	char lasttext[256]; /* supporting text */
+static 	char lasttext[256]; /* supporting text */
 	char support; /* supporting character */
 	int i, n;
 	int asword, quiet, rc, gsprop, c;
