@@ -542,7 +542,12 @@ if(cmd) ++cmdlist;
 asword = 0;
 
 	/* some comands are meaningless when the buffer is empty */
-	if(cmdp->nonempty && rb->end == rb->start) goto error_bound;
+	if(cmdp->nonempty) {
+if(!rb->cursor &&
+cmd != 3 && cmd != 4 && cmd != 44)
+goto error_buzz;
+if(rb->end == rb->start) goto error_bound;
+}
 
 	support = 0;
 	if(cmdp->nextchar) {
@@ -870,6 +875,10 @@ return;
 	default:
 	error_bell:
 		acs_bell();
+		return;
+
+	error_buzz:
+		acs_buzz();
 		return;
 
 	error_bound:
