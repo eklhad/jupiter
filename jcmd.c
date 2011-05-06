@@ -1114,6 +1114,7 @@ acs_startfifo("/etc/jupiter.fifo");
 while(1) {
 acs_ss_events();
 
+key_command:
 if(last_key) {
 char *cmdlist; // the speech command
 int mkcode = acs_build_mkcode(last_key, last_ss);
@@ -1130,7 +1131,17 @@ goRead = 0;
 /* Pause, to allow for some characters to print, especially if clicks are on. */
 usleep(clicksOn ? 250000 : 25000);
 readNextMark = rb->end;
+/* The refresh is really a call to events() in disguise.
+ * So any of those handlers could be called.
+ * Turn reading on, so the more_h handler doesn't cause any trouble. */
+reading = 1;
 acs_refresh();
+/* did a keycommand sneak in? */
+if(last_key) goto key_command;
+/* did reading get killed for any other reason, e.g. console switch? */
+if(!reading) continue;
+/* now turn it off; we'll turn it on later if it's a go */
+reading = 0;
 if(!readNextMark) continue;
 while(c = *readNextMark) {
 if(c != ' ' && c != '\n' &&
