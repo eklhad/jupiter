@@ -279,7 +279,11 @@ acs_sounds(*p);
 if(!quiet && *p) acs_tone_onoff(1);
 break;
 case 'o': ess_flowcontrol(1-*p); break;
-case 's': acs_screenmode(*p); break;
+case 's':
+acs_screenmode(*p);
+/* this line is really important; don't leave the temp cursor in the other world. */
+acs_cursorset();
+break;
 case 'c':
 if(*p) acs_postprocess &= ~ACS_PP_STRIP_CTRL;
 else acs_postprocess |= ACS_PP_STRIP_CTRL;
