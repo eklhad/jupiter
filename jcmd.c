@@ -242,6 +242,7 @@ static char goRead; /* read the next sentence */
 #define markleft rb->marks[26]
 static unsigned int *markright;
 static char screenmode = 0;
+static char jdebug;
 static char cc_buffer = 0; // control chars in the buffer
 static char echoMode; // echo keys as they are typed
 static char indexmarkers = 1; // use index markers for the synthesizer
@@ -260,6 +261,7 @@ static void binmode(int action, int c, int quiet)
 	case 'o': p = &overrideSignals; break;
 case 's': markleft = 0; p = &screenmode; break;
 	case 'c': p = &cc_buffer; break;
+	case 'd': p = &jdebug; break;
 	case 'l': p = &readLiteral; break;
 /* don't see the point of this one
 	case 'x': p = &indexmarkers; break;
@@ -283,6 +285,9 @@ case 's':
 acs_screenmode(*p);
 /* this line is really important; don't leave the temp cursor in the other world. */
 acs_cursorset();
+break;
+case 'd':
+acs_debug = jdebug;
 break;
 case 'c':
 if(*p) acs_postprocess &= ~ACS_PP_STRIP_CTRL;
