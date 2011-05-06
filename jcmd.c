@@ -1065,7 +1065,7 @@ sprintf(serialdev, "/dev/ttyS%d", port);
 
 if(acs_open(acsdriver) < 0) {
 fprintf(stderr, "cannot open the driver %s;\n%s.\n",
-acsdriver, acs_errordesc());
+acsdriver, strerror(errno));
 if(errno == EBUSY) {
 fprintf(stderr, "Acsint can only be opened by one program at a time.\n\
 Another program is currently using the acsint device driver.\n");
