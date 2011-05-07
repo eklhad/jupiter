@@ -2,13 +2,13 @@
 
 all : jupiter
 
-CFLAGS = -I../acsint
+CFLAGS = -I../acsint/bridge -I../acsint/driver
 
 OBJS = jcmd.o jxlate.o jencode.o
 
-$(OBJS) : jup.h ../acsint/acsbridge.h ../acsint/acsint.h
+$(OBJS) : jup.h ../acsint/bridge/acsbridge.h ../acsint/driver/acsint.h
 
-BRIDGE = ../acsint/libacs.a
+BRIDGE = ../acsint/bridge/libacs.a
 
 jupiter : $(OBJS) $(BRIDGE)
 	cc -s -o jupiter $(OBJS) $(BRIDGE)
