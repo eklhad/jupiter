@@ -12,10 +12,12 @@ as articulated by the Free Software Foundation.
 #include <iconv.h>
 #include <wchar.h>
 
+#include <linux/vt.h>
+
 #include "jup.h"
 
 
-// Speech command structure, one instance for each jupiter command.
+/* Speech command structure, one instance for each jupiter command. */
 struct cmd {
 	const char *desc; // description
 	const char brief[12]; // brief name for the command
@@ -25,7 +27,7 @@ struct cmd {
 	char nextline; // needs line of text to complete command
 };
 
-// the available speech commands
+/* the available speech commands */
 static const struct cmd speechcommands[] = {
 	{0,""}, // 0 is not a function
 	{"clear buffer","clbuf"},
@@ -75,10 +77,17 @@ static const struct cmd speechcommands[] = {
 	{"restart the adapter","reexec",0,1},
 	{"reload the config file","reload",0,1},
 	{"dump buffer","dump",0, 1},
+	{"suspend the adapter","suspend",0,1},
 	{0,""}
 };
 
 static short const max_cmd = sizeof(speechcommands)/sizeof(struct cmd) - 1;
+
+/* Make sure these correspond to the commands above */
+#define CMD_BYPASS 22
+#define CMD_REEXEC 45
+#define CMD_RELOAD 46
+#define CMD_SUSPEND 48
 
 // derive a command code from its brief name
 static int
@@ -108,8 +117,9 @@ compStatus(int cmd)
 	if(cmdp->nextchar) compstat |= 2;
 	/* Follow-on string always ends the composite. */
 	if(cmdp->nextline) compstat |= 1;
-	if(cmd == 22) compstat = 5; /* bypass */
-	if(cmd == 45) compstat = 5; /* reexec */
+if(cmd == CMD_BYPASS || cmd == CMD_REEXEC ||
+cmd == CMD_RELOAD || cmd == CMD_SUSPEND)
+compstat = 5;
 	return compstat;
 } // compStatus
 
@@ -245,7 +255,9 @@ static char screenmode = 0;
 static char jdebug;
 static char cc_buffer = 0; // control chars in the buffer
 static char echoMode; // echo keys as they are typed
-static char indexmarkers = 1; // use index markers for the synthesizer
+static char suspended;
+static char suspendClicks;
+static char suspendlist[MAX_NR_CONSOLES+1];
 /* buffer for cut&paste */
 static char cutbuf[10000];
 
@@ -264,7 +276,6 @@ case 's': markleft = 0; p = &screenmode; break;
 	case 'd': p = &jdebug; break;
 	case 'l': p = &readLiteral; break;
 /* don't see the point of this one
-	case 'x': p = &indexmarkers; break;
 */
 	default: acs_bell(); return;
 } // switch
@@ -525,6 +536,36 @@ return (n < l ? -1 : 0);
 
 
 /*********************************************************************
+Suspend or unsuspend the adapter.
+This is invoked by a speech command,
+or called when you switch consoles.
+*********************************************************************/
+
+static void suspend(void)
+{
+static const char suspendCommand[] = { CMD_SUSPEND, 0};
+acs_suspendkeys(suspendCommand);
+reading = 0;
+suspended = 1;
+suspendClicks = clicksOn;
+if(clicksOn) {
+clicksOn = 0;
+acs_sounds(0);
+}
+} /* suspend */
+
+static void unsuspend(void)
+{
+acs_resumekeys();
+if(suspendClicks) {
+clicksOn = 1;
+acs_sounds(1);
+}
+suspended = 0;
+} /* unsuspend */
+
+
+/*********************************************************************
 Execute the speech command.
 The argument is the command list, null-terminated.
 *********************************************************************/
@@ -549,6 +590,9 @@ top:
 if(cmd) ++cmdlist;
 	cmdp = &speechcommands[cmd];
 asword = 0;
+
+if(suspended && cmd != CMD_SUSPEND)
+return;
 
 	/* some comands are meaningless when the buffer is empty */
 	if(cmdp->nonempty) {
@@ -881,6 +925,21 @@ sprintf(shortPhrase, "buffer %d", acs_fgc);
 		ss_say_string(prepTTSmsg(shortPhrase));
 return;
 
+case 48: /* suspend */
+if(suspended) {
+static const short unsuspendNotes[] = {
+500, 10, 530, 10, 560, 10, 0};
+unsuspend();
+acs_notes(unsuspendNotes);
+} else {
+static const short suspendNotes[] = {
+560, 10, 530, 10, 500, 10, 0};
+acs_notes(suspendNotes);
+suspend();
+}
+suspendlist[acs_fgc] = suspended;
+return;
+
 	default:
 	error_bell:
 		acs_bell();
@@ -926,8 +985,14 @@ last_key = last_ss = 0;
 interrupt();
 sprintf(shortPhrase, "console %d", acs_fgc);
 		ss_say_string(prepTTSmsg(shortPhrase));
+
+if(suspended && !suspendlist[acs_fgc])
+unsuspend();
+if(!suspended && suspendlist[acs_fgc])
+suspend();
 } /* fgc_h */
 
+/* fifo input still works, even if suspended */
 static void fifo_h(char *msg)
 {
 /* stop reading, and speak the message */
@@ -938,6 +1003,8 @@ free(msg);
 
 static void more_h(int echo, unsigned int c)
 {
+if(suspended) return;
+
 if(echoMode && echo == 1 && c < 256 && isprint(c)) {
 interrupt();
 speakChar(c, 1, clicksOn, 0);
@@ -953,7 +1020,7 @@ goRead = 1;
 static void
 openSound(void)
 {
-static const short startsnd[] = {
+static const short startNotes[] = {
 		476,5,
 530,5,
 596,5,
@@ -962,7 +1029,7 @@ static const short startsnd[] = {
 858,5,
 942,5,
 0,0};
-acs_notes(startsnd);
+acs_notes(startNotes);
 } /* openSound */
 
 static void
