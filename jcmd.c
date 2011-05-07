@@ -44,9 +44,9 @@ static const struct cmd speechcommands[] = {
 	{"forward one character","for",1},
 	{"preivious row","prow",1},
 	{"next row","nrow",1},
-	{"reed the current karecter as a word","asword",1,1},
+	{"reed the current karecter as a nato word","asword",1,1},
 	{"reed the current karecter","char",1,1},
-	{"upper or lower case","case",1,1},
+	{"read capital x as cap x","capchar",1,1},
 	{"current cohllumm number","colnum",1,1},
 	{"reed the current word","word",1,1},
 	{"start reeding","read",1,1},
@@ -678,14 +678,19 @@ acs_endline();
 		}
 		break;
 
-	case 15: asword = 1;
+/* read character, or cap character, or word for character */
+	case 15: asword = 2; goto letter;
+case 17: asword = 1; /* fall through */
 	case 16:
 letter:
 acs_cursorsync();
 		speakChar(acs_getc_uc(), 1, clicksOn, asword);
 		break;
 
-	case 17: /* indicate case */
+#if 0
+/* don't think we need this any more. */
+        {"upper or lower case","case",1,1},
+	old case 17: /* indicate case */
 acs_cursorsync();
 		c = acs_getc();
 		if(!isalpha(c)) goto error_bell;
@@ -697,6 +702,7 @@ if(!quiet) acs_click();
 			ss_say_string((rc ? "upper" : "lower"));
 }
 return;
+#endif
 
 	case 18: /* read column number */
 if(!quiet) acs_click();

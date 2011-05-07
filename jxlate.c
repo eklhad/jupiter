@@ -268,7 +268,8 @@ return 0;
  * Or write, into shortPhrase, how it should be pronounced.
 * sayit means speak the character now.
  * bellsound means newline and bell make sounds, rather than speaking words.
- * asword means a letter is spoken using the nato phonetic alphabet,
+ * asword = 1, say the word cap before capital letter.
+ * asword = 2, a letter is spoken using the nato phonetic alphabet,
  * thus making it clear whether it is m or n. */
 void speakChar(int c, int sayit, int bellsound, int asword)
 {
@@ -328,13 +329,22 @@ goto top;
 	}
 
 /* now a letter or digit */
+if(isalpha(c) && asword == 2) {
 c = tolower(c);
-if(isalpha(c) && asword) {
 t = ow->natoWords[c-'a'];
 goto copy_t;
 }
 
-	if(sayit) ss_say_char(c);
+	if(sayit) {
+if(isupper(c) && asword == 1) {
+char capbuf[8];
+c = tolower(c);
+sprintf(capbuf, "cap %c", c);
+ss_say_string(capbuf);
+} else {
+ss_say_char(c);
+}
+}
 } /* speakChar */
 
 
