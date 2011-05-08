@@ -3,17 +3,22 @@ based on the acsint / acsbridge system.
 It is modeled after my Jupiter speech adapter that lives in the kernel,
 but we don't have to be in the kernel any longer!
 
-This is so new it's embryonic.
-But we may as well track it from the beginning, eh?
+This is a work in progress, well tested for some synthesizers,
+and not even tried on others.
 
-jcmd.c implements the speech commands and is the heart of the adapter.
+jupiter.c is the adapter,
+and it shows what you can do in 1,200 lines of code if you have a bridge layer
+and a text preprocessor at your disposal.
 
 The key bindings are in jup.cfg.
 
-jencode.c encodes certain constructs like dates and times and phone numbers
-and addresses etc, and jxlate.c translates these back out into words.
+tpencode.c encodes certain constructs like dates and times and phone numbers
+and addresses etc, and tpxlate.c translates these back out into words.
 Thus 02/03/1932 becomes
 february third nineteen thirdy 2
+This is the text preprocessor,
+and it will soon move to the bridge layer, and out of here.
+It is not jupiter specific, so why should it be here?
 You can exercise the text preprocessor, without running the adapter,
 by running
 jupiter tts

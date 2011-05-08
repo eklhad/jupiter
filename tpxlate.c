@@ -1,8 +1,9 @@
 /*********************************************************************
 
-jxlate.c: perform final text translation, before TTS conversion.
+tpxlate.c: perform final translations to prepare for tts.
+This expands the constructs that were encoded in tpencode.c.
 
-Copyright (C) Karl Dahlke, 2000.
+Copyright (C) Karl Dahlke, 2011.
 This software may be freely distributed under the GPL, general public license,
 as articulated by the Free Software Foundation.
 
@@ -18,7 +19,7 @@ reasonably sized sentence.
 #include <time.h>
 #include <malloc.h>
 
-#include "jup.h"
+#include "tp.h"
 
 
 /*********************************************************************
@@ -26,14 +27,14 @@ A few global variables.
 These can be adjusted based on your synthesizer.
 *********************************************************************/
 
-char relativeDate = 0;
-char showZones = 0;
-int myZone = -5; /* offset from gmt */
-char digitWords = 0; /* read digits as words */
-char acronUpper = 1; /* acronym letters in upper case? */
-char acronDelim = ' ';
-char oneSymbol; /* read one symbol - not a sentence */
-char readLiteral = 1; // read each punctuation mark
+char tp_relativeDate = 0;
+char tp_showZones = 0;
+int tp_myZone = -5; /* offset from gmt */
+char tp_digitWords = 0; /* read digits as words */
+char tp_acronUpper = 1; /* acronym letters in upper case? */
+char tp_acronDelim = ' ';
+char tp_oneSymbol; /* read one symbol - not a sentence */
+char tp_readLiteral = 1; // read each punctuation mark
 /* a convenient place to put little phrases to speak */
 char shortPhrase[NEWWORDLEN];
 
@@ -245,14 +246,14 @@ int
 setupTTS(void)
 {
 const int room = 400;
-j_in->buf = malloc(room);
-j_in->offset = malloc(room * sizeof(ofs_type));
-j_out->buf = malloc(room);
-j_out->offset = malloc(room * sizeof(ofs_type));
-if(!j_in->buf || !j_in->offset || !j_out->buf || !j_out->offset)
+tp_in->buf = malloc(room);
+tp_in->offset = malloc(room * sizeof(ofs_type));
+tp_out->buf = malloc(room);
+tp_out->offset = malloc(room * sizeof(ofs_type));
+if(!tp_in->buf || !tp_in->offset || !tp_out->buf || !tp_out->offset)
 return -1;
-j_in->room = room;
-j_out->room = room;
+tp_in->room = room;
+tp_out->room = room;
 
 	ow = outwords + LANG_ENGLISH; /* that's all we have for now */
 	articles = ow->articles;
@@ -355,23 +356,23 @@ Holds input text and output text, as transformed by each pass.
 
 static struct textbuf tb1, tb2;
 
-struct textbuf *j_in = &tb1, *j_out = &tb2;
+struct textbuf *tp_in = &tb1, *tp_out = &tb2;
 
 void textBufSwitch(void)
 {
 	struct textbuf *save;
-	save = j_in;
-	j_in = j_out;
-	j_out = save;
-	memset(j_out->offset, 0, j_out->room*sizeof(ofs_type));
-	j_out->buf[0] = 0;
-	j_out->len = 1;
+	save = tp_in;
+	tp_in = tp_out;
+	tp_out = save;
+	memset(tp_out->offset, 0, tp_out->room*sizeof(ofs_type));
+	tp_out->buf[0] = 0;
+	tp_out->len = 1;
 } /* textBufSwitch */
 
 void carryOffsetForward(const char *s)
 {
-	ofs_type offset = j_in->offset[s - j_in->buf];
-	j_out->offset[j_out->len] = offset;
+	ofs_type offset = tp_in->offset[s - tp_in->buf];
+	tp_out->offset[tp_out->len] = offset;
 } /* carryOffsetForward */
 
 /* There's always room for the last zero */
@@ -379,12 +380,12 @@ void textbufClose(const char *s, int overflow)
 {
 	if(overflow) {
 		/* Back up to the start of this token. */
-		while(!j_out->offset[j_out->len]) {
+		while(!tp_out->offset[tp_out->len]) {
 			appendBackup();
-			if(j_out->len == 1) break;
+			if(tp_out->len == 1) break;
 		}
 	} else carryOffsetForward(s);
-	j_out->buf[j_out->len] = 0;
+	tp_out->buf[tp_out->len] = 0;
 } /* textbufClose */
 
 
@@ -442,7 +443,7 @@ static void time_checkpoint(void)
 	time_t sec;
 	time(&sec);
 	ulsec = (unsigned long)sec;
-	ulsec += myZone*3600; /* convert from gmt */
+	ulsec += tp_myZone*3600; /* convert from gmt */
 	ulsec /= (24*3600L);
 	nowday = (int)ulsec + 1;
 	nowyear = (int)(ulsec / 366);
@@ -499,22 +500,22 @@ static int roomCheck(int n)
 	char *buf;
 	ofs_type *ofs;
 	int room;
-	if(j_out->len + n < j_out->room) return 0;
-	room = j_out->room/3*4;
-	buf = realloc(j_out->buf, room);
+	if(tp_out->len + n < tp_out->room) return 0;
+	room = tp_out->room/3*4;
+	buf = realloc(tp_out->buf, room);
 	if(!buf) return 1;
-	ofs = realloc(j_out->offset, room*sizeof(ofs_type));
+	ofs = realloc(tp_out->offset, room*sizeof(ofs_type));
 	if(!ofs) return 1;
-	j_out->buf = buf;
-	j_out->offset = ofs;
-j_out->room = room;
+	tp_out->buf = buf;
+	tp_out->offset = ofs;
+tp_out->room = room;
 	return 0;
 } /* roomCheck */
 
 int appendChar(char c)
 {
 	if(roomCheck(1)) return 1;
-	j_out->buf[j_out->len++] = c;
+	tp_out->buf[tp_out->len++] = c;
 	return 0;
 } /* appendChar */
 
@@ -522,8 +523,8 @@ int appendChar(char c)
 static int appendIchar(char c)
 {
 	if(roomCheck(2)) return 1;
-	j_out->buf[j_out->len++] = c;
-	j_out->buf[j_out->len++] = ' ';
+	tp_out->buf[tp_out->len++] = c;
+	tp_out->buf[tp_out->len++] = ' ';
 	return 0;
 } /* appendIchar */
 
@@ -533,15 +534,15 @@ int appendString(const char *s)
 {
 	int n = strlen(s);
 	if(roomCheck(n+1)) return 1;
-	strcpy((j_out->buf + j_out->len), s);
-	j_out->len += n;
-	j_out->buf[j_out->len++] = ' ';
+	strcpy((tp_out->buf + tp_out->len), s);
+	tp_out->len += n;
+	tp_out->buf[tp_out->len++] = ' ';
 	return 0;
 } /* appendString */
 
 static int appendIdigit(int n)
 {
-	return (digitWords ?
+	return (tp_digitWords ?
 	appendString(ow->idigits[n]) :
 	appendIchar('0'+n));
 } /* appendIdigit */
@@ -556,22 +557,22 @@ static int appendDigitString(const char *s, int n)
 	while(n--) {
 		c = *s++;
 		if(appendIdigit(c-'0')) return 1;
-		if(n && !digitWords) appendBackup();
+		if(n && !tp_digitWords) appendBackup();
 	}
 	return 0;
 } /* appendDigitString */
 
 void lastUncomma(void)
 {
-	int len = j_out->len;
-	ofs_type offset = j_out->offset[len];
-	char *s = j_out->buf + len - 1;
+	int len = tp_out->len;
+	ofs_type offset = tp_out->offset[len];
+	char *s = tp_out->buf + len - 1;
 	char c = *s;
 	while(c == ' ') --len, c = *--s;
 	if(c != ',') return;
 	--len;
-	j_out->offset[len] = offset;
-	j_out->len = len;
+	tp_out->offset[len] = offset;
+	tp_out->len = len;
 } /* lastUncomma */
 
 static int appendAcronString(const char *s)
@@ -582,11 +583,11 @@ static int appendAcronString(const char *s)
 	while(n--) {
 		c = *s++;
 		/* we assume c is a letter */
-		if(acronUpper) c = toupper(c);
+		if(tp_acronUpper) c = toupper(c);
 		else c = tolower(c);
-		j_out->buf[j_out->len++] = c;
-		c = n ? acronDelim : ' ';
-		j_out->buf[j_out->len++] = c;
+		tp_out->buf[tp_out->len++] = c;
+		c = n ? tp_acronDelim : ' ';
+		tp_out->buf[tp_out->len++] = c;
 	}
 	return 0;
 } /* appendAcronString */
@@ -769,7 +770,7 @@ static int appendDate(int m, int d, int y, int z)
 	int rc = 0;
 
 	/* See about reading "yesterday" */
-	if(relativeDate &&
+	if(tp_relativeDate &&
 	y >= 1970 && y < 2400 &&
 	m > 0 && m <= 12 &&
 	d > 0 && d <= ndays[m] &&
@@ -802,7 +803,7 @@ static int appendDate(int m, int d, int y, int z)
 	/* should we inject a comma here? */
 	if(y > 0 && y <= 9999) rc |= appendYear(y);
 
-	if(z && showZones) {
+	if(z && tp_showZones) {
 		rc |= appendIchar(',');
 		rc |= appendString(ow->zones[z]);
 		rc |= appendIchar(',');
@@ -845,7 +846,7 @@ static int appendTime(int h, int m, int s, char ampm, int z)
 	}
 
 zoneCheck:
-	if(z && showZones) {
+	if(z && tp_showZones) {
 		rc |= appendString(ow->zones[z]);
 		rc |= appendIchar(',');
 	}
@@ -1457,7 +1458,7 @@ static int expandCode(const char **sp)
 
 	switch(code) {
 	case SP_REPEAT:
-		/* We wouldn't be here unless readLiteral were 1 */
+		/* We wouldn't be here unless tp_readLiteral were 1 */
 		c = *start++;
 		if(c == ' ') c = 0;
 		if(c == '\n') c = SP_MARK;
@@ -1485,7 +1486,7 @@ static int expandCode(const char **sp)
 		/* next character is comma or period, */
 		/* for quick list items or listed paragraphs. */
 		c = *t;
-		if(!readLiteral) {
+		if(!tp_readLiteral) {
 			if(appendIchar(*t)) goto overflow;
 		} else {
 			speakChar((unsigned char)c, 0, 0, 0);
@@ -1555,7 +1556,7 @@ code_date:
 	case SP_EMOT: /* emoticon */
 		if(appendString(ow->emotPhrase[*start - 'A']))
 			goto overflow;
-			if(!readLiteral && *start == 'D' &&
+			if(!tp_readLiteral && *start == 'D' &&
 			appendIchar('!')) goto overflow;
 		break;
 
@@ -1612,7 +1613,7 @@ code_frac:
 		if(isspace(*t)) ++t;
 		if(*t == SP_MARK &&
 		t[1] == SP_DATE)
-			j_out->buf[j_out->len-1] = ',';
+			tp_out->buf[tp_out->len-1] = ',';
 		break;
 
 	case SP_STATE:
@@ -1647,7 +1648,7 @@ code_frac:
 		break;
 
 	case SP_URL:
-		if(!readLiteral) {
+		if(!tp_readLiteral) {
 			/* prepend a comma, unless there is a flowing keyword */
 			zone = 0;
 			t = start - 3;
@@ -1750,7 +1751,7 @@ if(			(g == '0' && e == 't') ||
 
 	/* find the start and end of this number */
 	if(d == ',' || d == '.' || isalpha(d) ||
-	oneSymbol) comma = start;
+	tp_oneSymbol) comma = start;
 	if(d == '-' && isalnum(start[-2])) comma = start;
 	if(c == '0') comma = start;
 	for(end=start+1; (e = *end); ++end) {
@@ -1774,7 +1775,7 @@ if(			(g == '0' && e == 't') ||
 		if(e == '-' && isalnum(end[1])) comma = start;
 		if(end - start > 19) comma = start; /* I don't do trillions */
 		/* int foo[] = {237,485,193,221}; */
-		if(readLiteral && end - start > 7) comma = start;
+		if(tp_readLiteral && end - start > 7) comma = start;
 	}
 
 	/* Bad comma arrangement?  Read each component. */
@@ -1911,8 +1912,8 @@ copynumber:
 past3:
 
 	if(append3num(value, hundredflag, 0)) goto overflow;
-	if(d == '$' && !oneSymbol) {
-		if(!readLiteral) goto money;
+	if(d == '$' && !tp_oneSymbol) {
+		if(!tp_readLiteral) goto money;
 		if(end-start == 3) goto money;
 		if(e == '.' && isdigit(end[1])) goto money;
 		/* read $3 as dollar three, a positional parameter */
@@ -1932,7 +1933,7 @@ past3:
 	goto possessive;
 
 copydigits:
-	if(d == '$' && !readLiteral &&
+	if(d == '$' && !tp_readLiteral &&
 	appendString(ow->dollarWord)) goto overflow;
 	if(appendDigitString(start, end-start)) goto overflow;
 	appendBackup();
@@ -2015,7 +2016,7 @@ alphaToken:
 	while(end[1] == '.' && isalpha(end[2]))
 		end += 2;
 	if(end - start >= 2 && !isalnum(end[1])) {
-		if(!readLiteral || end - start > 2 || isupper(*start)) {
+		if(!tp_readLiteral || end - start > 2 || isupper(*start)) {
 			++end;
 			/* check for e.g. and i.e. */
 			d = tolower(start[2]);
@@ -2030,10 +2031,10 @@ alphaToken:
 			/* speak each letter */
 			for(; start < end; start+=2) {
 				c = *start;
-				if(acronUpper) c = toupper(c);
+				if(tp_acronUpper) c = toupper(c);
 				else c = tolower(c);
 				if(appendIchar(c)) goto overflow;
-				if(start < end-1) j_out->buf[j_out->len-1] = acronDelim;
+				if(start < end-1) tp_out->buf[tp_out->len-1] = tp_acronDelim;
 			}
 			appendBackup();
 			goto possessive;
@@ -2072,7 +2073,7 @@ alphaToken:
 
 	/* strip out trailing apostrophes */
 	while(end[-1] == '\'') {
-		if(end-start >= 5 && !readLiteral &&
+		if(end-start >= 5 && !tp_readLiteral &&
 		tolower(end[-2]) == 'n' &&
 		tolower(end[-3]) == 'i') {
 			f = 'G';
@@ -2248,9 +2249,9 @@ static int expandPunct(const char **sp)
 	d = s[-1];
 	e = s[1];
 
-	if(readLiteral) {
+	if(tp_readLiteral) {
 		/* Here are the exceptions */
-		if(oneSymbol || !strchr(".^$", (char)c)) {
+		if(tp_oneSymbol || !strchr(".^$", (char)c)) {
 do_punct:
 			speakChar((unsigned char)c, 0, 0, 0);
 				if(appendString(shortPhrase)) goto overflow;
@@ -2392,7 +2393,7 @@ do_to_word:
 
 	case '$':
 		/* This logic decides whether to read the word dollar.
-		 * It is applicable only when readLiteral is 1.
+		 * It is applicable only when tp_readLiteral is 1.
 		 * Supress the word "dollar" if we're starting a money amount.
 		 * Unfortunately this logic mirrors the logic in
 		 * expandAlphaNumeric, which also decides whether a number
@@ -2412,7 +2413,7 @@ do_to_word:
 		len = t - end;
 		if(len > 4) goto nomoney;
 		if(len >= 3) break;
-		if(!readLiteral) break;
+		if(!tp_readLiteral) break;
 		if(*t == '.' && isdigit(t[1])) break;
 		/* Check for comma formatting. */
 		if(*t != ',') goto nomoney;
@@ -2421,7 +2422,7 @@ do_to_word:
 		if(*t != ',') break;
 		if(!isdigit(t[1])) break;
 nomoney:
-		if(readLiteral) goto do_punct;
+		if(tp_readLiteral) goto do_punct;
 		break;
 
 	case '.':
@@ -2443,7 +2444,7 @@ do_dot:
 			break;
 		}
 		if(isdigit(e)) goto do_point;
-		if(readLiteral) goto do_punct;
+		if(tp_readLiteral) goto do_punct;
 		if(!e || isspace(e)) goto copychar;
 		break;
 
@@ -2554,7 +2555,7 @@ do_slash:
 		}
 			break;
 noexp:
-		if(readLiteral) goto do_punct;
+		if(tp_readLiteral) goto do_punct;
 		break;
 
 case ':':
@@ -2610,8 +2611,8 @@ We assume there are no control characters,
 except those that denote flavors of white space,
 as described in another module.
 And there should be no binary data.
-We assume the calling routine has placed or moved the input text to j_in,
-whence we can write to j_out.
+We assume the calling routine has placed or moved the input text to tp_in,
+whence we can write to tp_out.
 See tc_textBufSwitch() near the top of this file.
 *********************************************************************/
 
@@ -2621,10 +2622,10 @@ static void expandSentence(void)
 	char c;
 	int overflowValue = 1;
 
-	s = j_in->buf + 1;
+	s = tp_in->buf + 1;
 
 	while((c = *s)) {
-		if(c == '\t' && !oneSymbol) c = ' ';
+		if(c == '\t' && !tp_oneSymbol) c = ' ';
 		if(c == ' ') goto nextchar;
 		carryOffsetForward(s);
 		if(c == '\n' || c == '\7') {
@@ -2633,11 +2634,11 @@ passThrough:
 			goto nextchar;
 		} /* physical newline or bell */
 
-		if(c == '\f' && !oneSymbol) {
+		if(c == '\f' && !tp_oneSymbol) {
 			goto passThrough;
 		} /* formfeed */
 
-		if(c == '\n' && !oneSymbol)goto passThrough;
+		if(c == '\n' && !tp_oneSymbol)goto passThrough;
 
 		if(c == SP_MARK) {
 			if(expandCode((const char **)&s)) goto overflow;
@@ -2677,8 +2678,8 @@ static void postCleanup(void)
 	static const char squishable[] = ",;:.?!";
 	char presquish = 0, postsquish, insquish;
 
-	s = t = j_out->buf + 1;
-	u = v = j_out->offset + 1;
+	s = t = tp_out->buf + 1;
+	u = v = tp_out->offset + 1;
 	d = '\f';
 
 	for(; (c = *s); ++s, ++u) {
@@ -2720,12 +2721,12 @@ add_c:
 		*t++ = d = c;
 		*v++ = *u;
 		presquish = insquish;
-	} /* loop over chars in j_out */
+	} /* loop over chars in tp_out */
 
 	if(d == ' ') --t, --v;
 	*t = 0;
 	*v = *u;
-	j_out->len = t - j_out->buf;
+	tp_out->len = t - tp_out->buf;
 } /* postCleanup */
 
 
@@ -2750,66 +2751,66 @@ if(debugPoint == c) exit(0)
 
 void prepTTS(void)
 {
-	end_ofs = j_in->offset[j_in->len];
+	end_ofs = tp_in->offset[tp_in->len];
 
-	debugCheck('a', j_in);
+	debugCheck('a', tp_in);
 
 	/* get ready for the first in->out transformation */
-	memset(j_out->offset, 0, j_out->room*sizeof(ofs_type));
-	j_out->buf[0] = 0;
-	j_out->len = 1;
+	memset(tp_out->offset, 0, tp_out->room*sizeof(ofs_type));
+	tp_out->buf[0] = 0;
+	tp_out->len = 1;
 
-	if(!oneSymbol) {
+	if(!tp_oneSymbol) {
 		time_checkpoint();
 
 		/* Get rid of binary data */
 		ascify();
-		debugCheck('b', j_in);
+		debugCheck('b', tp_in);
 
 #if 0
 		/* relinearize .signature block */
 /* This code was lost years ago. */
 		relinearize();
-		debugCheck('c', j_in);
+		debugCheck('c', tp_in);
 #endif
 
 #if 0
 		/* compress whitespace */
 /* don't think we need this any more */
 		doWhitespace();
-		debugCheck('d', j_in);
+		debugCheck('d', tp_in);
 #endif
 
 		/* remove garbage lines */
 		ungarbage();
-		debugCheck('e', j_in);
+		debugCheck('e', tp_in);
 
 	/* Look for titles */
 		titles();
-		debugCheck('f', j_in);
+		debugCheck('f', tp_in);
 
 		/* encode list items */
 		listItem();
-		debugCheck('g', j_out);
+		debugCheck('g', tp_out);
 		textBufSwitch();
-	} /* oneSymbol */
+	} /* tp_oneSymbol */
 
 	/* Encode constructs such as date and time.
 	 * There are some word replacements that can take place even when
 	 * reading symbol by symbol. */
-	if(!oneSymbol || isalpha(j_in->buf[1])) {
+	if(!tp_oneSymbol || isalpha(tp_in->buf[1])) {
 		doEncode();
-		debugCheck('h', j_out);
+		debugCheck('h', tp_out);
 		textBufSwitch();
 	}
 
 	/* translate everything to alphanum text */
 	expandSentence();
-	debugCheck('y', j_out);
+	debugCheck('y', tp_out);
 
 	/* compress whitespace and sequences of commas and periods */
 	postCleanup();
-	debugCheck('z', j_out);
+	debugCheck('z', tp_out);
 } /* prepTTS */
 
 
@@ -2821,15 +2822,15 @@ int len = strlen(msg);
 int i;
 
 /* I assume there is room for the message */
-j_in->buf[0] = 0;
-strcpy(j_in->buf+1, msg);
-j_in->len = len+1;
+tp_in->buf[0] = 0;
+strcpy(tp_in->buf+1, msg);
+tp_in->len = len+1;
 
 	for(i=1; i<=len+1; ++i)
-		j_in->offset[i] = i;
+		tp_in->offset[i] = i;
 
 	prepTTS();
 
-	return j_out->buf + 1;
+	return tp_out->buf + 1;
 } /* prepTTSmsg */
 

@@ -1,6 +1,6 @@
 /*********************************************************************
 
-jcmd.c: jupiter speech commands.
+jupiter.c: jupiter speech adapter.
 
 Copyright (C) Karl Dahlke, 2011.
 This software may be freely distributed under the GPL, general public license,
@@ -14,7 +14,9 @@ as articulated by the Free Software Foundation.
 
 #include <linux/vt.h>
 
-#include "jup.h"
+#include "tp.h"
+
+#define stringEqual !strcmp
 
 
 /* Speech command structure, one instance for each jupiter command. */
@@ -274,7 +276,7 @@ static void binmode(int action, int c, int quiet)
 case 's': markleft = 0; p = &screenmode; break;
 	case 'c': p = &cc_buffer; break;
 	case 'd': p = &jdebug; break;
-	case 'l': p = &readLiteral; break;
+	case 'l': p = &tp_readLiteral; break;
 /* don't see the point of this one
 */
 	default: acs_bell(); return;
@@ -360,22 +362,22 @@ gsprop |= ACS_GS_NLSPACE;
 top:
 /* grab something to read */
 acs_log("nextpart 0x%x\n", rb->cursor[0]);
-j_in->buf[0] = 0;
-j_in->offset[0] = 0;
-acs_getsentence(j_in->buf+1, 120, j_in->offset+1, gsprop);
+tp_in->buf[0] = 0;
+tp_in->offset[0] = 0;
+acs_getsentence(tp_in->buf+1, 120, tp_in->offset+1, gsprop);
 
-if(!j_in->buf[1]) {
+if(!tp_in->buf[1]) {
 /* Empty sentence, nothing else to read. */
 acs_log("empty done\n");
 reading = 0;
 return;
 }
 
-first = j_in->buf[1];
+first = tp_in->buf[1];
 if(first == '\n' || first == '\7') {
 /* starts out with newline or bell, which is usually associated with a sound */
 /* This will swoop/beep with clicks on, or say the word newline or bell with clicks off */
-speakChar(j_in->buf[1], 1, clicksOn, 0);
+speakChar(tp_in->buf[1], 1, clicksOn, 0);
 
 if(oneLine && first == '\n') {
 acs_log("newline done\n");
@@ -384,8 +386,8 @@ return;
 }
 
 /* Find the next token/offset, which should be the next character */
-for(i=2; !j_in->offset[i]; ++i)  ;
-rb->cursor += j_in->offset[i];
+for(i=2; !tp_in->offset[i]; ++i)  ;
+rb->cursor += tp_in->offset[i];
 /* but don't leave it there if you have run off the end of the buffer */
 if(rb->cursor >= rb->end) {
 rb->cursor = rb->end-1;
@@ -399,7 +401,7 @@ return;
 goto top;
 }
 
-j_in->len = 1 + strlen(j_in->buf+1);
+tp_in->len = 1 + strlen(tp_in->buf+1);
 /* If the sentence runs all the way to the end of the buffer,
  * then we might be in the middle of printing a word.
  * We don't want to read half the word, then come back and refresh
@@ -407,55 +409,55 @@ j_in->len = 1 + strlen(j_in->buf+1);
  * Nor do we want to hear the word return, when newline is about to follow.
  * Despite this code, it is still possible to hear part of a word,
  * or the cr in crlf, if the output is delayed for some reason. */
-end = j_in->buf + j_in->len - 1;
+end = tp_in->buf + tp_in->len - 1;
 if(*end == '\r') {
-if(j_in->len > 2 && j_in->offset[j_in->len-1])
-*end = 0, --j_in->len;
+if(tp_in->len > 2 && tp_in->offset[tp_in->len-1])
+*end = 0, --tp_in->len;
 } else if(!isspace(*end)) {
 for(--end; *end; --end)
 if(isspace(*end)) break;
-if(*end++ && j_in->offset[end-j_in->buf]) {
+if(*end++ && tp_in->offset[end-tp_in->buf]) {
 *end = 0;
-j_in->len = end - j_in->buf;
+tp_in->len = end - tp_in->buf;
 }
 }
 
 #if 0
-puts(j_in->buf+1);
+puts(tp_in->buf+1);
 /* show offsets as returned by getsentence() */
-for(i=1; i<=j_in->len; ++i)
-if(j_in->offset[i])
-printf("%d=%d\n", i, j_in->offset[i]);
+for(i=1; i<=tp_in->len; ++i)
+if(tp_in->offset[i])
+printf("%d=%d\n", i, tp_in->offset[i]);
 #endif
 
 prepTTS();
 
 #if 0
-puts(j_out->buf+1);
+puts(tp_out->buf+1);
 /* show offsets after prepTTS */
-for(i=1; i<=j_out->len; ++i)
-if(j_out->offset[i])
-printf("%d=%d\n", i, j_out->offset[i]);
+for(i=1; i<=tp_out->len; ++i)
+if(tp_out->offset[i])
+printf("%d=%d\n", i, tp_out->offset[i]);
 #endif
 
 /* Cut the text at a logical sentence, as indicated by newline.
  * If newline wasn't already present in the input, this has been
  * set for you by prepTTS. */
-end = strpbrk(j_out->buf+1, "\7\n");
+end = strpbrk(tp_out->buf+1, "\7\n");
 if(!end)
-end = j_out->buf+1 + strlen(j_out->buf+1);
+end = tp_out->buf+1 + strlen(tp_out->buf+1);
 *end = 0;
-j_out->len = end - j_out->buf;
+tp_out->len = end - tp_out->buf;
 
 /* An artificial newline, inserted by prepTTS to denote a sentence boundary,
  * won't have an offset.  In that case we need to grab the next one. */
-i = j_out->len;
-while(!j_out->offset[i]) ++i;
-j_out->offset[j_out->len] = j_out->offset[i];
+i = tp_out->len;
+while(!tp_out->offset[i]) ++i;
+tp_out->offset[tp_out->len] = tp_out->offset[i];
 
-readNextMark = rb->cursor + j_out->offset[j_out->len];
+readNextMark = rb->cursor + tp_out->offset[tp_out->len];
 //flip = 51 - flip;
-ss_say_string_imarks(j_out->buf+1, j_out->offset+1, flip);
+ss_say_string_imarks(tp_out->buf+1, tp_out->offset+1, flip);
 } /* readNextPart */
 
 /* index mark handler, read next sentence if we finished the last one */
@@ -719,16 +721,16 @@ if(c <= ' ') goto letter;
 acs_startword();
 acs_cursorsync();
 gsprop = ACS_GS_STOPLINE | ACS_GS_REPEAT | ACS_GS_ONEWORD;
-j_in->buf[0] = 0;
-j_in->offset[0] = 0;
-acs_getsentence(j_in->buf+1, WORDLEN, j_in->offset+1, gsprop);
-		j_in->len = strlen(j_in->buf+1) + 1;
-rb->cursor += j_in->offset[j_in->len] - 1;
+tp_in->buf[0] = 0;
+tp_in->offset[0] = 0;
+acs_getsentence(tp_in->buf+1, WORDLEN, tp_in->offset+1, gsprop);
+		tp_in->len = strlen(tp_in->buf+1) + 1;
+rb->cursor += tp_in->offset[tp_in->len] - 1;
 acs_cursorset();
-oneSymbol = 1;
+tp_oneSymbol = 1;
 prepTTS();
-oneSymbol = 0;
-		ss_say_string(j_out->buf+1);
+tp_oneSymbol = 0;
+		ss_say_string(tp_out->buf+1);
 break;
 
 	case 20: /* start continuous reading */
@@ -1097,7 +1099,7 @@ fprintf(stderr, "Could not malloc space for text preprocessing buffers.\n");
 exit(1);
 }
 
-relativeDate = 1;
+tp_relativeDate = 1;
 
 if(argc && stringEqual(argv[0], "-d")) {
 acs_debug = 1;
@@ -1113,13 +1115,13 @@ my_config = argv[0];
 }
 
 if(argc && stringEqual(argv[0], "tts")) {
-readLiteral = 0;
+tp_readLiteral = 0;
 testTTS();
 return 0;
 }
 
 if(argc && stringEqual(argv[0], "ltts")) {
-readLiteral = 1;
+tp_readLiteral = 1;
 testTTS();
 return 0;
 }

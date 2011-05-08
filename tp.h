@@ -1,6 +1,6 @@
 /*********************************************************************
 
-jup.h: header file for the Jupiter speech system.
+tp.h: header file for the text preprocessor.
 
 Copyright (C) Karl Dahlke, 2011.
 This software may be freely distributed under the GPL, general public license,
@@ -8,8 +8,8 @@ as articulated by the Free Software Foundation.
 
 *********************************************************************/
 
-#ifndef JUP_H
-#define JUP_H 1
+#ifndef TP_H
+#define TP_H 1
 
 #include <string.h>
 #include <ctype.h>
@@ -18,17 +18,14 @@ as articulated by the Free Software Foundation.
 
 #include "acsbridge.h"
 
-#define stringEqual !strcmp
-
-/* Sizes and limits. */
 /* WORDLEN comes from acsbridge.h */
 #define NEWWORDLEN 200 /* size of word or number after expansion */
-#define SENTENCEWORDS 20 /* max number of words in a sentence */
 
-/* Coded constructs such as date, time, state, etc. */
+/* Speech preparation mark */
 /* This is generally assigned to, and compared against, a char */
 #define SP_MARK ((char)0x80)
 
+/* Coded constructs such as date, time, state, etc. */
 enum sp_codes {
 SP_NONE,
 SP_REPEAT,
@@ -45,9 +42,6 @@ SP_URL,
 SP_DF, // date or fraction
 };
 
-
-/* Global variables */
-
 struct textbuf {
 	char *buf;
 	ofs_type *offset;
@@ -55,26 +49,26 @@ struct textbuf {
 	unsigned short len;
 };
 
-extern struct textbuf *j_in, *j_out;
+extern struct textbuf *tp_in, *tp_out;
 
-#define appendBackup() (--j_out->len)
+#define appendBackup() (--tp_out->len)
 /* case independent character compare */
 #define ci_cmp(x, y) (tolower(x) != tolower(y))
 
-extern char relativeDate;
-extern char showZones;
-extern int myZone; /* offset from gmt */
-extern char digitWords; /* read digits as words */
-extern char acronUpper; /* acronym letters in upper case? */
-extern char acronDelim;
-extern char oneSymbol; /* read one symbol - not a sentence */
-extern char readLiteral; // read each punctuation mark
+extern char tp_relativeDate;
+extern char tp_showZones;
+extern int tp_myZone; /* offset from gmt */
+extern char tp_digitWords; /* read digits as words */
+extern char tp_acronUpper; /* acronym letters in upper case? */
+extern char tp_acronDelim;
+extern char tp_oneSymbol; /* read one symbol - not a sentence */
+extern char tp_readLiteral; // read each punctuation mark
 /* a convenient place to put little phrases to speak */
 extern char shortPhrase[NEWWORDLEN];
 
 /* prototypes */
 
-/* sourcefile=jencode.c */
+/* sourcefile=tpencode.c */
 void ascify(void) ;
 void doWhitespace(void) ;
 void ungarbage(void) ;
@@ -83,7 +77,7 @@ void sortReservedWords(void) ;
 void listItem(void) ;
 void doEncode(void) ;
 
-/* sourcefile=jxlate.c */
+/* sourcefile=tpxlate.c */
 int setupTTS(void) ;
 void speakChar(int c, int sayit, int bellsound, int asword) ;
 void textBufSwitch(void) ;

@@ -1,13 +1,13 @@
 /*********************************************************************
 
-jencode.c: Encode dates, times, etc.
+tpencode.c: Encode dates, times, etc for text preprocessing.
 
-Copyright (C) Karl Dahlke, 2000.
+Copyright (C) Karl Dahlke, 2011.
 This software may be freely distributed under the GPL, general public license,
 as articulated by the Free Software Foundation.
 *********************************************************************/
 
-#include "jup.h"
+#include "tp.h"
 
 
 /*********************************************************************
@@ -47,9 +47,9 @@ void ascify(void)
 	int i, j;
 	char *lastbin = 0;
 
-	s = t = j_in->buf + 1;
-	end_s = j_in->buf + j_in->len;
-	u = v = j_in->offset + 1;
+	s = t = tp_in->buf + 1;
+	end_s = tp_in->buf + tp_in->len;
+	u = v = tp_in->offset + 1;
 
 	for(; s < end_s; ++s, ++u) {
 		c = *s;
@@ -77,7 +77,7 @@ void ascify(void)
 		if(c == 0) c = '\n'; /* let null look like newline */
 		if(c == '\t') goto add_c;
 		if(c == '\7')goto add_c;
-		if(!readLiteral) {
+		if(!tp_readLiteral) {
 			/* Treat delete or control character as space */
 			if(c == '\177') c = ' ';
 			if(c < ' ') c = ' ';
@@ -117,7 +117,7 @@ void ascify(void)
 			if(i == BINARYHORIZON) {
 				/* nothing back there */
 				lastbin = t;
-				if(lastbin == j_in->buf+1) { --lastbin; continue; }
+				if(lastbin == tp_in->buf+1) { --lastbin; continue; }
 				c = '\f';
 				goto add_c;
 			}
@@ -143,7 +143,7 @@ add_c:
 
 	*t = 0; /* null terminate */
 	*v = *u;
-	j_in->len = t - j_in->buf;
+	tp_in->len = t - tp_in->buf;
 } /* ascify */
 
 
@@ -159,7 +159,7 @@ In other words, formfeed is a paragraph break.
 To support Unix and Dos,
 an isolated nl is treated as cr.
 Note that nl, tab, and formfeed, if present in the original
-text, are not read literally, even if readLiteral is set.
+text, are not read literally, even if tp_readLiteral is set.
 This is because these symbols are used to denote various forms of whitespace,
 in the codification process below, and, perhaps,
 in the mind of the author.
@@ -236,8 +236,8 @@ void doWhitespace(void)
 	ofs_type *u, *v, of;
 	char c, d, e, f, emot;
 
-	s = t = j_in->buf + 1;
-	u = v = j_in->offset + 1;
+	s = t = tp_in->buf + 1;
+	u = v = tp_in->offset + 1;
 	for(; (c = *s); ++s, ++u) {
 retry:
 		d = t[-1];
@@ -276,7 +276,7 @@ retry:
 				if(e&0x80) goto add_c;
 				if(e == '\f' || e == '\n') break;
 				if(e != ' ' && e != '\t' &&
-				readLiteral) goto add_c;
+				tp_readLiteral) goto add_c;
 			}
 			/* Line is empty, or only contains graphics chars. */
 			/* Call it a paragraph break. */
@@ -292,7 +292,7 @@ retry:
 
 		if(c < ' ') {
 			/* some other control character */
-			if(readLiteral) goto add_c;
+			if(tp_readLiteral) goto add_c;
 			if(c == '\7') goto add_c;
 			c = '\t';
 			goto retry;
@@ -319,7 +319,7 @@ retry:
 				++s, ++u;
 		} /* & */
 
-		if(readLiteral) goto skip_encoding;
+		if(tp_readLiteral) goto skip_encoding;
 		/* look for net emoticons */
 		if(d > ' ') goto no_emot;
 		/* An emoticon that leads the message, or even a paragraph, doesn't mean much.
@@ -392,7 +392,7 @@ skip_encoding:
 				if(isalpha(s[1])) continue;
 				if(!strchr("iIxXcC", (char)c)) continue;
 			}
-			if(readLiteral) goto add_c;
+			if(tp_readLiteral) goto add_c;
 			if(isalnum(c)) goto add_c;
 			/* perhaps the string is longer */
 			if(e == c) continue;
@@ -442,7 +442,7 @@ add_c:
 
 	*t = 0; /* null terminate */
 	*v = *u;
-	j_in->len = t - j_in->buf;
+	tp_in->len = t - tp_in->buf;
 } /* doWhitespace */
 
 
@@ -472,11 +472,11 @@ void ungarbage(void)
 	int alphacount, digcount, charcount, length;
 	int isgarbage, wasgarbage = 0;
 
-	if(readLiteral) return;
-if(j_in->len < 100) return;
+	if(tp_readLiteral) return;
+if(tp_in->len < 100) return;
 
-	start_para_t = s = t = j_in->buf + 1;
-	start_para_o = u = v = j_in->offset + 1;
+	start_para_t = s = t = tp_in->buf + 1;
+	start_para_o = u = v = tp_in->offset + 1;
 
 	while(*s) { /* another line */
 		isgarbage = 0;
@@ -537,7 +537,7 @@ if(j_in->len < 100) return;
 			/* preserve the cr, for the sounds */
 			if(c) *t++ = c, *v++ = of;
 #else
-			if(t > j_in->buf + 1)
+			if(t > tp_in->buf + 1)
 				t[-1] = '\f', v[-1] = of;
 #endif
 			start_para_t = t, start_para_o = v;
@@ -564,7 +564,7 @@ if(j_in->len < 100) return;
 #endif
 	*t = 0;
 	*v = *u;
-	j_in->len = t - j_in->buf;
+	tp_in->len = t - tp_in->buf;
 } /* ungarbage */
 
 
@@ -664,7 +664,7 @@ static int capLevel(char **lp)
 		char *q, *t;
 		ofs_type *q1, *t1;
 		q = t = base;
-		q1 = t1 = j_in->offset + (base - j_in->buf);
+		q1 = t1 = tp_in->offset + (base - tp_in->buf);
 		for(; q<s; ++q, ++q1) {
 			c = *q;
 			*t++ = c;
@@ -764,7 +764,7 @@ static int canSeparate(char *base, unsigned char type, int length)
 /* Separate out titles */
 void titles(void)
 {
-	char *s = j_in->buf + 1;
+	char *s = tp_in->buf + 1;
 	unsigned char l1type = CAP_LOWER;
 	unsigned char l2type = 0, l3type = 0;
 	char *l1ptr = s-1, *l2ptr = 0, *l3ptr = 0;
@@ -840,7 +840,7 @@ advance both cursors as they made incremental transformations
 on behalf of the calling routine.
 The code stank!
 Now these cursors are global variables, visible to all the routines.
-(See the structures j_in and j_out)
+(See the structures tp_in and tp_out)
 Some would call this bad programming too, since the support routines now have
 "side-effects".  But they had side-effects anyways,
 and the trickling down pointer parameters were confusing as hell.
@@ -1557,14 +1557,14 @@ static int lineLength(const char *s, const char **begin_p, const char **end_p)
 	begin = t;
 	if(begin_p) *begin_p = begin;
 
-	end_o = j_in->offset[end - j_in->buf];
+	end_o = tp_in->offset[end - tp_in->buf];
 	if(!end_o) goto estimate;
 	begin_o = 0;
 	if(!*begin) {
-		begin_o = j_in->offset[1];
+		begin_o = tp_in->offset[1];
 		if(!begin_o) goto estimate;
 	} else {
-		begin_o = j_in->offset[begin - j_in->buf];
+		begin_o = tp_in->offset[begin - tp_in->buf];
 		if(!begin_o) goto estimate;
 		++begin_o;
 	}
@@ -1742,7 +1742,7 @@ static int encodeWord(const char *s)
 		v = r->value;
 
 		if(cx != CX_WORD || v == 1) {
-			if(oneSymbol) continue;
+			if(tp_oneSymbol) continue;
 			/* should not be part of a url or filename etc */
 			if(isdigit(e)) continue;
 			if(isdigit(d) && cx != CX_UNIT) continue;
@@ -1859,7 +1859,7 @@ while(c && strchr(",. ", c)) c = *++q;
 			checkDot = 0;
 			if(yd == 4) { /* it's a 4-digit year. */
 				/* back up and look for day */
-				t = j_out->buf + j_out->len - 1;
+				t = tp_out->buf + tp_out->len - 1;
 				if(*t == ' ' && isdigit(t[-1])) {
 					c = *--t;
 					day = c - '0';
@@ -1869,7 +1869,7 @@ while(c && strchr(",. ", c)) c = *++q;
 						c = *--t;
 					}
 					if(!isalnum(c) && day && day <= 31)
-						j_out->len = t+1 - j_out->buf;
+						tp_out->len = t+1 - tp_out->buf;
 					else day = 0;
 				} /* prior number */
 				goto zoneDate;
@@ -2251,11 +2251,11 @@ doBible:
 			/* check for number prefix */
 			j = r->abbrev >> 1;
 			if(j) {
-				t = j_out->buf + j_out->len - 1;
+				t = tp_out->buf + tp_out->len - 1;
 				if(*t == ' ' &&
 				t[-1] >= '1' && t[-1] <= '0'+j &&
 				!isalnum(t[-2])) {
-					j_out->len -= 2;
+					tp_out->len -= 2;
 					v += t[-1] - '1';
 				} else {
 					/* special code for john */
@@ -2375,7 +2375,7 @@ if(day2) { /* 3/4 is more likely a fraction than march 4 */
 }
 		/* A good indication of fraction is a prior
 		 * number, such as 3 1/2 feet tall. */
-		t = j_out->buf + j_out->len - 1;
+		t = tp_out->buf + tp_out->len - 1;
 		c = *t;
 		if(c == ' ' || c == '\n') c = *--t;
 		if(c == '-') c = *--t;
@@ -2385,7 +2385,7 @@ if(day2) { /* 3/4 is more likely a fraction than march 4 */
 			/* get rid of the minus, and any spaces. */
 			++t;
 			*t++ = ' ';
-			j_out->len = t - j_out->buf;
+			tp_out->len = t - tp_out->buf;
 			/* three and one half */
 			if(appendString(andWord)) goto overflow;
 			isFraction = 1;
@@ -2515,7 +2515,7 @@ if(isalnum(c) &&
 	isdigit(q[2]) && isdigit(q[3]) &&
 	!isdigit(q[4])) {
 		/* If a date precedes, modify it */
-		t = j_out->buf + j_out->len - 1;
+		t = tp_out->buf + tp_out->len - 1;
 		c = *t;
 		if(c == ' ') c = *--t;
 		if(c == SP_MARK &&
@@ -2524,7 +2524,7 @@ if(isalnum(c) &&
 			year = atoiLength(q, 4);
 			s = q+4;
 			if(year) {
-				j_out->len = t - j_out->buf;
+				tp_out->len = t - tp_out->buf;
 				sprintf(numbuf, "%04d%c", year, SP_MARK);
 				if(appendString((char*)numbuf)) goto overflow;
 			} /* nonzero year */
@@ -2544,7 +2544,7 @@ if(isalnum(c) &&
 	goto encoded;
 
 phoneCheck:
-	if(readLiteral) goto done;
+	if(tp_readLiteral) goto done;
 	/* Check for north American phone numbers. */
 	/* Must be written with the first block of 3 separated */
 	/* from the other 4 or 7. */
@@ -2554,7 +2554,7 @@ phoneCheck:
 	if(length == 3 && c <= '1') goto done;
 	leadOne = 0;
 	p4 = 0, numext = 0;
-	t = j_out->buf + j_out->len;
+	t = tp_out->buf + tp_out->len;
 	p1 = s0;
 	if(length == 4) ++p1, leadOne = 1;
 	if(!leadOne &&
@@ -2609,7 +2609,7 @@ number_ok:
 	t[-1] &&
 	strchr("([{<", (char)t[-1]))
 		--t;
-	j_out->len = t - j_out->buf;
+	tp_out->len = t - tp_out->buf;
 
 	/* look for an extention */
 	if(c == ',') c = *++s;
@@ -2679,7 +2679,7 @@ void listItem(void)
 
 	wordbuf[0] = SP_MARK;
 	wordbuf[1] = SP_LI;
-	s = j_in->buf + 1;
+	s = tp_in->buf + 1;
 
 	while((c = *s)) { /* another line */
 		endpunct = 0;
@@ -2700,7 +2700,7 @@ void listItem(void)
 		if(c && !isspace(c)) goto copy;
 		strncpy(wordbuf+2, (char*)s, t-s);
 		endpunct = 1 + t-s;
-		if(!readLiteral) wordbuf[endpunct] = '.';
+		if(!tp_readLiteral) wordbuf[endpunct] = '.';
 		wordbuf[endpunct+1] = SP_MARK;
 		wordbuf[endpunct+2] = 0;
 
@@ -2737,9 +2737,9 @@ copy:
 		} /* loop copying this line */
 
 		/* revert to comma for a short item */
-		if(endpunct && !readLiteral &&
+		if(endpunct && !tp_readLiteral &&
 		s - start <= 20)
-			j_out->buf[j_out->len - (s-start) - 2] = ',';
+			tp_out->buf[tp_out->len - (s-start) - 2] = ',';
 
 		last_li = (endpunct > 0);
 		if(c == '\f') last_li = 0;
@@ -2760,9 +2760,9 @@ a preexisting punctuation mark, add in a period.
 
 static int markSentence(void)
 {
-	char *t = j_out->buf + j_out->len - 1;
+	char *t = tp_out->buf + tp_out->len - 1;
 	char c = *t;
-if(readLiteral) return 0;
+if(tp_readLiteral) return 0;
 	while(c == ' ' || c == '\t') c = *--t;
 	if(!c) return 0;
 	if(isspace(c)) return 0;
@@ -2774,7 +2774,7 @@ if(readLiteral) return 0;
 #ifndef __KERNEL__
 static int markPhrase(void)
 {
-	char *t = j_out->buf + j_out->len - 1;
+	char *t = tp_out->buf + tp_out->len - 1;
 	char c = *t;
 	while(c == ' ' || c == '\t') c = *--t;
 	if(!c) return 0;
@@ -2792,7 +2792,7 @@ to encode word/number based constructs.
 
 void doEncode(void)
 {
-	char *s = j_in->buf + 1;
+	char *s = tp_in->buf + 1;
 	char c, d, e;
 	char *t;
 		const char *sp; /* start of previous line */
@@ -2807,7 +2807,7 @@ void doEncode(void)
 
 	while((c = *s)) {
 
-		if(oneSymbol) goto start_c;
+		if(tp_oneSymbol) goto start_c;
 
 		if(urlSet) { /* waiting for the slash */
 			if(!isalnum(c) && !strchr("/-._,", (char)c))
@@ -2815,7 +2815,7 @@ void doEncode(void)
 		}
 		if(urlComma && (c <= ' ' ||
 		(s[1] <= ' ' && strchr(urlTerminate, (char)c)))) {
-			if(!readLiteral && appendChar(',')) goto overflow;
+			if(!tp_readLiteral && appendChar(',')) goto overflow;
 			urlComma = 0;
 		}
 
@@ -2867,7 +2867,7 @@ void doEncode(void)
 			goto crSentence;
 #ifndef __KERNEL__
 		/* append a comma to each short line */
-		if(!readLiteral && lp <= 42 &&
+		if(!tp_readLiteral && lp <= 42 &&
 		markPhrase()) goto overflow;
 #endif
 		goto start_c;
@@ -2918,7 +2918,7 @@ start_c:
 			goto add_c;
 		} /* leading letter of a word */
 
-		if(oneSymbol) goto add_c;
+		if(tp_oneSymbol) goto add_c;
 
 		if(isdigit(c) && !isalnum(d)) {
 			rc = encodeNumber(s);
@@ -2931,7 +2931,7 @@ start_c:
 		/* check for protocol://domain */
 		if(c == ':' && s[1] == '/' && s[2] == '/' &&
 		isalnum(s[3]) && isalnum(d)) {
-			t = j_out->buf + j_out->len - 1;
+			t = tp_out->buf + tp_out->len - 1;
 			j = 0;
 			while(isalnum(*t)) ++j, --t;
 			++t;
@@ -2948,7 +2948,7 @@ if(rc >= 0) {
 			*t++ = SP_URL;
 			*t++ = rc;
 			*t++ = SP_MARK;
-			j_out->len = t - j_out->buf;
+			tp_out->len = t - tp_out->buf;
 			urlSet = 1;
 			s += 3;
 			continue;
@@ -2970,7 +2970,7 @@ if(rc >= 0) {
 			/* At some point we should decide whether the pathname
 			 * under the web site is "readable".
 			 * For now we just check its length. */
-			if(readLiteral || (n < 24 && nd <= 6)) {
+			if(tp_readLiteral || (n < 24 && nd <= 6)) {
 				urlComma = 1;
 				c = '/';
 				goto add_c;
@@ -2978,10 +2978,10 @@ if(rc >= 0) {
 			/* skip pass the pathname */
 			s = --t;
 			if(!strchr(urlTerminate, (char)d)) {
-				if(!readLiteral) *s = ',';
+				if(!tp_readLiteral) *s = ',';
 				else ++s;
 			}
-			t = j_out->buf + j_out->len;
+			t = tp_out->buf + tp_out->len;
 			for(--t; *t; --t)
 				if(*t == SP_MARK) break;
 			t[-1] += 12;
@@ -3023,7 +3023,7 @@ puncSentence:
 			if(appendChar(c)) goto overflow;
 			++s;
 			if(isquote) {
-				if(readLiteral) {
+				if(tp_readLiteral) {
 					carryOffsetForward(s);
 					if(appendChar(*s)) goto overflow;
 				}
@@ -3037,13 +3037,13 @@ puncSentence:
 		if(c != '.') { /* ? and ! carry a lot of weight */
 			if(isupper(e)) goto puncSentence;
 			if(isquote) {
-				if(readLiteral) goto add_c;
+				if(tp_readLiteral) goto add_c;
 				if(c == '?') c= ',';
 				++s;
 				goto add_c;
 			} /* in quotes */
 			if(spaces == 2) goto puncSentence;
-			if(!readLiteral) c= ',';
+			if(!tp_readLiteral) c= ',';
 			goto add_c;
 		} /* ? or ! */
 
@@ -3060,7 +3060,7 @@ puncSentence:
 		 * at the end of U.S.A. */
 		if(!islower(e)) goto puncSentence;
 		if(spaces == 2) goto puncSentence;
-		if(!readLiteral) c = ',';
+		if(!tp_readLiteral) c = ',';
 		/* fall through */
 
 add_c:

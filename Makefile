@@ -4,9 +4,9 @@ all : jupiter
 
 CFLAGS = -I../acsint/bridge -I../acsint/driver
 
-OBJS = jcmd.o jxlate.o jencode.o
+OBJS = jupiter.o tpencode.o tpxlate.o
 
-$(OBJS) : jup.h ../acsint/bridge/acsbridge.h ../acsint/driver/acsint.h
+$(OBJS) : tp.h ../acsint/bridge/acsbridge.h ../acsint/driver/acsint.h
 
 BRIDGE = ../acsint/bridge/libacs.a
 
