@@ -11,6 +11,7 @@ as articulated by the Free Software Foundation.
 #include <fcntl.h>
 #include <iconv.h>
 #include <wchar.h>
+#include <unistd.h>
 
 #include <linux/vt.h>
 
@@ -1104,7 +1105,8 @@ exit(1);
 tp_relativeDate = 1;
 
 if(argc && stringEqual(argv[0], "-d")) {
-acs_debug = 1;
+/* it should be safe to chdir, but not to close std{in,out,err}. Reload prints stuff there. */
+daemon(0, 1);
 ++argv, --argc;
 }
 
