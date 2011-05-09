@@ -1068,6 +1068,7 @@ const char *initstring;
 {"dtp", SS_STYLE_DECPC},
 {"bns", SS_STYLE_BNS},
 {"ace", SS_STYLE_ACE},
+{"esp", SS_STYLE_ESPEAKUP},
 {0, 0}};
 
 static void
@@ -1076,7 +1077,7 @@ usage(void)
 fprintf(stderr, "usage:  jupiter [-d] [-c configfile] synthesizer port\n");
 fprintf(stderr, "Synthesizer is: dbe = doubletalk external,\n");
 fprintf(stderr, "dte = dectalk external, dtp = dectalk pc,\n");
-fprintf(stderr, "bns = braille n speak, ace = accent.\n");
+fprintf(stderr, "bns = braille n speak, ace = accent, esp = espeakup.\n");
 fprintf(stderr, "port is 0 1 2 or 3, for the serial device.\n");
 exit(1);
 }
@@ -1086,6 +1087,7 @@ main(int argc, char **argv)
 {
 int i, port;
 char serialdev[20];
+char *cmd = NULL;
 
 /* remember the arg vector, before we start marching along. */
 argvector = argv;
@@ -1134,9 +1136,15 @@ ss_style = synths[i].style;
 ss_startvalues();
 ++argv, --argc;
 
+if (*argv[0] == '|') {
+cmd = argv[0]+1;
+}
+else
+{
 port = atoi(argv[0]);
 if(port < 0 || port > 3) usage();
 sprintf(serialdev, "/dev/ttyS%d", port);
+}
 
 if(acs_open(acsdriver) < 0) {
 fprintf(stderr, "cannot open the driver %s;\n%s.\n",
@@ -1166,7 +1174,11 @@ ss_imark_h = imark_h;
 // because it sends "key capture" commands to the acsint driver
 j_configure();
 
-if(ess_open(serialdev, 9600)) {
+if (cmd && pss_system(cmd) == -1) {
+fprintf(stderr, "Cannot execute command %s\n", cmd);
+exit(1);
+}
+if(!cmd && ess_open(serialdev, 9600)) {
 fprintf(stderr, "Cannot open serial device %s\n", serialdev);
 exit(1);
 }
