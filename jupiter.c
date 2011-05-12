@@ -920,6 +920,9 @@ usleep(700000);
  * Hope it gloms onto the correct executable.
  * Best to create a symblink from /usr/local/bin/jupiter to a safe executable. */
 execvp("jupiter", argvector);
+/* should never get here */
+puts("\7\7\7");
+exit(1);
 
 case 46: /* reload config file */
 acs_cr();
