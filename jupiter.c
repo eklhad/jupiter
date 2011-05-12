@@ -917,7 +917,8 @@ usleep(700000);
 /* We should really capture the absolute path of the running program,
  * and feed it to execv.  Not sure how to do that,
  * so I'm just using execvp instead.
- * Hope it gloms onto the correct executable. */
+ * Hope it gloms onto the correct executable.
+ * Best to create a symblink from /usr/local/bin/jupiter to a safe executable. */
 execvp("jupiter", argvector);
 
 case 46: /* reload config file */
@@ -1197,6 +1198,10 @@ ss_setspeed(9);
 ss_say_string("jupiter ready");
 
 acs_startfifo("/etc/jupiter.fifo");
+
+/* I have a low usage machine, so a small gap in output
+ * usually means something new to read.  Set it at 0.4 seconds. */
+acs_obreak(4);
 
 /* This runs forever, you have to hit interrupt to kill it,
  * or kill it from another console. */
