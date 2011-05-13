@@ -304,8 +304,8 @@ case 'd':
 acs_debug = jdebug;
 break;
 case 'c':
-if(*p) acs_postprocess &= ~ACS_PP_STRIP_CTRL;
-else acs_postprocess |= ACS_PP_STRIP_CTRL;
+if(*p) acs_postprocess &= ~(ACS_PP_STRIP_CTRL|ACS_PP_CTRL_H);
+else acs_postprocess |= (ACS_PP_STRIP_CTRL|ACS_PP_CTRL_H);
 break;
 } // switch
 } /* binmode */
