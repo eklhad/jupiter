@@ -44,7 +44,7 @@ SP_DF, // date or fraction
 
 struct textbuf {
 	char *buf;
-	ofs_type *offset;
+	acs_ofs_type *offset;
 	unsigned short room;
 	unsigned short len;
 };

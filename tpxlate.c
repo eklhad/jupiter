@@ -247,15 +247,15 @@ setupTTS(void)
 {
 const int room = 400;
 tp_in->buf = malloc(room);
-tp_in->offset = malloc(room * sizeof(ofs_type));
+tp_in->offset = malloc(room * sizeof(acs_ofs_type));
 tp_out->buf = malloc(room);
-tp_out->offset = malloc(room * sizeof(ofs_type));
+tp_out->offset = malloc(room * sizeof(acs_ofs_type));
 if(!tp_in->buf || !tp_in->offset || !tp_out->buf || !tp_out->offset)
 return -1;
 tp_in->room = room;
 tp_out->room = room;
 
-	ow = outwords + LANG_ENGLISH; /* that's all we have for now */
+	ow = outwords + ACS_LANG_ENGLISH; /* that's all we have for now */
 	articles = ow->articles;
 	andWord = ow->andWord;
 
@@ -364,14 +364,14 @@ void textBufSwitch(void)
 	save = tp_in;
 	tp_in = tp_out;
 	tp_out = save;
-	memset(tp_out->offset, 0, tp_out->room*sizeof(ofs_type));
+	memset(tp_out->offset, 0, tp_out->room*sizeof(acs_ofs_type));
 	tp_out->buf[0] = 0;
 	tp_out->len = 1;
 } /* textBufSwitch */
 
 void carryOffsetForward(const char *s)
 {
-	ofs_type offset = tp_in->offset[s - tp_in->buf];
+	acs_ofs_type offset = tp_in->offset[s - tp_in->buf];
 	tp_out->offset[tp_out->len] = offset;
 } /* carryOffsetForward */
 
@@ -498,13 +498,13 @@ They all return 1 if we run out of buffer.
 static int roomCheck(int n)
 {
 	char *buf;
-	ofs_type *ofs;
+	acs_ofs_type *ofs;
 	int room;
 	if(tp_out->len + n < tp_out->room) return 0;
 	room = tp_out->room/3*4;
 	buf = realloc(tp_out->buf, room);
 	if(!buf) return 1;
-	ofs = realloc(tp_out->offset, room*sizeof(ofs_type));
+	ofs = realloc(tp_out->offset, room*sizeof(acs_ofs_type));
 	if(!ofs) return 1;
 	tp_out->buf = buf;
 	tp_out->offset = ofs;
@@ -565,7 +565,7 @@ static int appendDigitString(const char *s, int n)
 void lastUncomma(void)
 {
 	int len = tp_out->len;
-	ofs_type offset = tp_out->offset[len];
+	acs_ofs_type offset = tp_out->offset[len];
 	char *s = tp_out->buf + len - 1;
 	char c = *s;
 	while(c == ' ') --len, c = *--s;
@@ -2672,7 +2672,7 @@ and multiple consecutive commas.
 static void postCleanup(void)
 {
 	char *s, *t;
-	ofs_type *u, *v;
+	acs_ofs_type *u, *v;
 	char c, d, e;
 	char *w;
 	static const char squishable[] = ",;:.?!";
@@ -2736,7 +2736,7 @@ Run all the phases of translation.
 *********************************************************************/
 
 char debugPoint;
-static ofs_type end_ofs;
+static acs_ofs_type end_ofs;
 #define debugCheck(c, which) \
 if(debugPoint == c) { \
 int kk; \
@@ -2756,7 +2756,7 @@ void prepTTS(void)
 	debugCheck('a', tp_in);
 
 	/* get ready for the first in->out transformation */
-	memset(tp_out->offset, 0, tp_out->room*sizeof(ofs_type));
+	memset(tp_out->offset, 0, tp_out->room*sizeof(acs_ofs_type));
 	tp_out->buf[0] = 0;
 	tp_out->len = 1;
 

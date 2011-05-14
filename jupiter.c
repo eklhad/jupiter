@@ -1073,13 +1073,13 @@ const char *name;
 int style;
 const char *initstring;
 } synths[] = {
-{"dbe", SY_STYLE_DOUBLE,
+{"dbe", ACS_SY_STYLE_DOUBLE,
 "\1@ \0012b \00126g \0012o \00194i "},
-{"dte", SY_STYLE_DECEXP},
-{"dtp", SY_STYLE_DECPC},
-{"bns", SY_STYLE_BNS},
-{"ace", SY_STYLE_ACE},
-{"esp", SY_STYLE_ESPEAKUP},
+{"dte", ACS_SY_STYLE_DECEXP},
+{"dtp", ACS_SY_STYLE_DECPC},
+{"bns", ACS_SY_STYLE_BNS},
+{"ace", ACS_SY_STYLE_ACE},
+{"esp", ACS_SY_STYLE_ESPEAKUP},
 {0, 0}};
 
 static void
@@ -1105,7 +1105,7 @@ argvector = argv;
 ++argv, --argc;
 
 /* this has to be done first */
-acs_lang = LANG_ENGLISH;
+acs_lang = ACS_LANG_ENGLISH;
 
 if(setupTTS()) {
 fprintf(stderr, "Could not malloc space for text preprocessing buffers.\n");
