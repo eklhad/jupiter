@@ -267,6 +267,7 @@ static char cutbuf[10000];
 static void binmode(int action, int c, int quiet)
 {
 	char *p;
+static int save_postprocess;
 
 	switch(c) {
 	case 'e': p = &echoMode; break;
@@ -309,8 +310,8 @@ case 'd':
 acs_debug = jdebug;
 break;
 case 'c':
-if(*p) acs_postprocess &= ~(ACS_PP_STRIP_CTRL|ACS_PP_CTRL_H);
-else acs_postprocess |= (ACS_PP_STRIP_CTRL|ACS_PP_CTRL_H);
+if(*p) save_postprocess = acs_postprocess, acs_postprocess = 0;
+else acs_postprocess = save_postprocess;
 break;
 } // switch
 } /* binmode */
@@ -1210,6 +1211,10 @@ acs_startfifo("/etc/jupiter.fifo");
 /* I have a low usage machine, so a small gap in output
  * usually means something new to read.  Set it at 0.4 seconds. */
 acs_obreak(4);
+
+/* This is the same as the default, but I set it here for clarity. */
+acs_postprocess = ACS_PP_CTRL_H | ACS_PP_CRLF |
+ACS_PP_CTRL_OTHER | ACS_PP_ESCB;
 
 /* This runs forever, you have to hit interrupt to kill it,
  * or kill it from another console. */
