@@ -286,7 +286,12 @@ case 's': markleft = 0; p = &screenmode; break;
 	if(action == 0) *p = 0;
 	if(action == 1) *p = 1;
 	if(action == 2) *p ^= 1;
-	if(!quiet) acs_tone_onoff(*p);
+	if(!quiet) {
+if(clicksOn || c == 'n')
+acs_tone_onoff(*p);
+else
+ss_say_string(*p ? "yes" : "no");
+}
 
 switch(c) {
 case 'n':
