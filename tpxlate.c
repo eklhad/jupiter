@@ -306,7 +306,7 @@ void speakChar(int c, int sayit, int bellsound, int asword)
 
 copy_t:
 		strcpy((char*)shortPhrase, t);
-		if(sayit) ss_say_string(shortPhrase);
+		if(sayit) acs_say_string(shortPhrase);
 		return;
 	} /* control character */
 
@@ -341,9 +341,9 @@ if(isupper(c) && asword == 1) {
 char capbuf[8];
 c = tolower(c);
 sprintf(capbuf, "cap %c", c);
-ss_say_string(capbuf);
+acs_say_string(capbuf);
 } else {
-ss_say_char(c);
+acs_say_char(c);
 }
 }
 } /* speakChar */

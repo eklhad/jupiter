@@ -252,7 +252,7 @@ static char overrideSignals = 0; // don't rely on cts rts etc
 static char reading; /* continuous reading in progress */
 static char goRead; /* read the next sentence */
 /* for cut&paste */
-#define markleft rb->marks[26]
+#define markleft acs_rb->marks[26]
 static unsigned int *markright;
 static char screenmode = 0;
 static char jdebug;
@@ -290,7 +290,7 @@ case 's': markleft = 0; p = &screenmode; break;
 if(clicksOn || c == 'n')
 acs_tone_onoff(*p);
 else
-ss_say_string(*p ? "yes" : "no");
+acs_say_string(*p ? "yes" : "no");
 }
 
 switch(c) {
@@ -299,7 +299,7 @@ acs_sounds(*p);
 /* If turning sounds on, then the previous tone didn't take. */
 if(!quiet && *p) acs_tone_onoff(1);
 break;
-case 'o': ess_flowcontrol(1-*p); break;
+case 'o': acs_serial_flow(1-*p); break;
 case 's':
 acs_screenmode(*p);
 /* this line is really important; don't leave the temp cursor in the other world. */
@@ -325,10 +325,10 @@ static void interrupt(void)
 {
 reading = 0;
 goRead = 0;
-if(ss_stillTalking()) ss_shutup();
+if(acs_stillTalking()) acs_shutup();
 }
 
-#define readNextMark rb->marks[27]
+#define readNextMark acs_rb->marks[27]
 
 static void
 readNextPart(void)
@@ -343,16 +343,16 @@ acs_refresh(); /* whether we need to or not */
 
 if(readNextMark) {
 /* could be past the buffer */
-if(readNextMark >= rb->end) {
+if(readNextMark >= acs_rb->end) {
 readNextMark = 0;
 reading = 0;
 return;
 }
-rb->cursor = readNextMark;
+acs_rb->cursor = readNextMark;
 readNextMark = 0;
 }
 
-if(!rb->cursor) {
+if(!acs_rb->cursor) {
 /* lots of text has pushed the reading cursor off the edge. */
 acs_buzz();
 reading = 0;
@@ -367,7 +367,7 @@ gsprop |= ACS_GS_NLSPACE;
 
 top:
 /* grab something to read */
-acs_log("nextpart 0x%x\n", rb->cursor[0]);
+acs_log("nextpart 0x%x\n", acs_rb->cursor[0]);
 tp_in->buf[0] = 0;
 tp_in->offset[0] = 0;
 acs_getsentence(tp_in->buf+1, 120, tp_in->offset+1, gsprop);
@@ -393,10 +393,10 @@ return;
 
 /* Find the next token/offset, which should be the next character */
 for(i=2; !tp_in->offset[i]; ++i)  ;
-rb->cursor += tp_in->offset[i];
+acs_rb->cursor += tp_in->offset[i];
 /* but don't leave it there if you have run off the end of the buffer */
-if(rb->cursor >= rb->end) {
-rb->cursor = rb->end-1;
+if(acs_rb->cursor >= acs_rb->end) {
+acs_rb->cursor = acs_rb->end-1;
 acs_log("eof done\n");
 reading = 0;
 return;
@@ -461,9 +461,9 @@ i = tp_out->len;
 while(!tp_out->offset[i]) ++i;
 tp_out->offset[tp_out->len] = tp_out->offset[i];
 
-readNextMark = rb->cursor + tp_out->offset[tp_out->len];
+readNextMark = acs_rb->cursor + tp_out->offset[tp_out->len];
 //flip = 51 - flip;
-ss_say_string_imarks(tp_out->buf+1, tp_out->offset+1, flip);
+acs_say_indexed(tp_out->buf+1, tp_out->offset+1, flip);
 } /* readNextPart */
 
 /* index mark handler, read next sentence if we finished the last one */
@@ -527,7 +527,7 @@ uni2utf8(const wchar_t * inbuf)
 static int dumpBuffer(void)
 {
 int fd, l, n;
-char *utf8 =  uni2utf8((wchar_t*)rb->start);
+char *utf8 =  uni2utf8((wchar_t*)acs_rb->start);
 if(!utf8) return -1;
 sprintf(shortPhrase, "/tmp/buf%d", acs_fgc);
 fd = open(shortPhrase, O_WRONLY|O_CREAT|O_TRUNC, 0666);
@@ -604,10 +604,10 @@ return;
 
 	/* some comands are meaningless when the buffer is empty */
 	if(cmdp->nonempty) {
-if(!rb->cursor &&
+if(!acs_rb->cursor &&
 cmd != 3 && cmd != 4 && cmd != 44)
 goto error_buzz;
-if(rb->end == rb->start) goto error_bound;
+if(acs_rb->end == acs_rb->start) goto error_bound;
 }
 
 	support = 0;
@@ -642,7 +642,7 @@ break;
 
 	case 2: /* locate visual cursor */
 		if(!screenmode) goto error_bell;
-rb->cursor = rb->v_cursor;
+acs_rb->cursor = acs_rb->v_cursor;
 acs_cursorset();
 		break;
 
@@ -707,7 +707,7 @@ acs_cursorsync();
 			acs_tone_onoff(rc);
 		else {
 if(!quiet) acs_click();
-			ss_say_string((rc ? "upper" : "lower"));
+			acs_say_string((rc ? "upper" : "lower"));
 }
 return;
 #endif
@@ -717,7 +717,7 @@ if(!quiet) acs_click();
 		acs_cursorsync();
 		n = acs_startline();
 		sprintf(shortPhrase, "%d", n);
-		ss_say_string(prepTTSmsg(shortPhrase));
+		acs_say_string(prepTTSmsg(shortPhrase));
 		return;
 
 	case 19: /* just read one word */
@@ -731,12 +731,12 @@ tp_in->buf[0] = 0;
 tp_in->offset[0] = 0;
 acs_getsentence(tp_in->buf+1, WORDLEN, tp_in->offset+1, gsprop);
 		tp_in->len = strlen(tp_in->buf+1) + 1;
-rb->cursor += tp_in->offset[tp_in->len] - 1;
+acs_rb->cursor += tp_in->offset[tp_in->len] - 1;
 acs_cursorset();
 tp_oneSymbol = 1;
 prepTTS();
 tp_oneSymbol = 0;
-		ss_say_string(tp_out->buf+1);
+		acs_say_string(tp_out->buf+1);
 break;
 
 	case 20: /* start continuous reading */
@@ -751,7 +751,7 @@ readNextMark = 0;
 readNextPart();
 		return; /* has to be the end of the composite */
 
-	case 21: ss_shutup(); break;
+	case 21: acs_shutup(); break;
 
 	case 22: acs_bypass(); break;
 
@@ -770,8 +770,8 @@ else strcpy(suptext, lasttext);
 		acs_cursorsync();
 if(!quiet) acs_cr();
 		if(!oneLine) {
-			ss_say_string("o k");
-rb->cursor -= (strlen(suptext)-1);
+			acs_say_string("o k");
+acs_rb->cursor -= (strlen(suptext)-1);
 			return;
 		}
 		/* start reading at the beginning of this line */
@@ -780,60 +780,60 @@ acs_startline();
 
 	case 28: /* volume */
 		if(!isdigit(support)) goto error_bell;
-rc = ss_setvolume(support-'0');
+rc = acs_setvolume(support-'0');
 t = "set volume";
 speechparam:
 if(rc == -1) goto error_bound;
 if(rc == -2) goto error_bell;
 		if(quiet) break;
-		ss_say_string(t);
+		acs_say_string(t);
 		break;
 
 	case 29: /* inc volume */
-rc = ss_incvolume();
+rc = acs_incvolume();
 t = "louder";
 goto speechparam;
 
 	case 30: /* dec volume */
-rc = ss_decvolume();
+rc = acs_decvolume();
 t = "softer";
 goto speechparam;
 
 	case 31: /* speed */
 		if(!isdigit(support)) goto error_bell;
-rc = ss_setspeed(support-'0');
+rc = acs_setspeed(support-'0');
 t = "set rate";
 goto speechparam;
 
 	case 32: /* inc speed */
-rc = ss_incspeed();
+rc = acs_incspeed();
 t = "faster";
 goto speechparam;
 
 	case 33: /* dec speed */
-rc = ss_decspeed();
+rc = acs_decspeed();
 t = "slower";
 goto speechparam;
 
 	case 34: /* pitch */
 		if(!isdigit(support)) goto error_bell;
-rc = ss_setpitch(support-'0');
+rc = acs_setpitch(support-'0');
 t = "set pitch";
 goto speechparam;
 
 	case 35: /* inc pitch */
-rc = ss_incpitch();
+rc = acs_incpitch();
 t = "higher";
 goto speechparam;
 
 	case 36: /* dec pitch */
-rc = ss_decpitch();
+rc = acs_decpitch();
 t = "lower";
 goto speechparam;
 
 	case 37: /* set voice */
 		if(support < '0' || support > '9') goto error_bell;
-		rc = ss_setvoice(support-'0');
+		rc = acs_setvoice(support-'0');
 t = "hello there";
 goto speechparam;
 
@@ -857,7 +857,7 @@ acs_endbuf();
 case 40: /* mark left */
 if(!input) goto error_bell;
 acs_cursorsync();
-markleft = rb->cursor;
+markleft = acs_rb->cursor;
 if(!quiet) acs_tone_onoff(0);
 break;
 
@@ -872,7 +872,7 @@ cutbuf[n] = 0;
 acs_line_configure(cutbuf, 0);
 cutbuf[n++] = '<';
 acs_cursorsync();
-markright = rb->cursor;
+markright = acs_rb->cursor;
 if(markright < markleft) goto error_bound;
 i = markright - markleft;
 ++i;
@@ -894,29 +894,29 @@ return;
 echoMode = support - '0';
 		if(input && !*cmdlist) {
 static const char * const echoWords[] = { "off", "letters", "words", "letters pause", "words pause"};
-ss_say_string(echoWords[echoMode]);
+acs_say_string(echoWords[echoMode]);
 }
 		break;
 
 case 43: /* set a marker in the tty buffer */
 if(support < 'a' || support > 'z') goto error_bell;
 acs_cursorsync();
-if(!rb->cursor) goto error_bell;
-rb->marks[support-'a'] = rb->cursor;
+if(!acs_rb->cursor) goto error_bell;
+acs_rb->marks[support-'a'] = acs_rb->cursor;
 if(!quiet) acs_tone_onoff(0);
 break;
 
 case 44: /* jump to a preset marker */
 if(support < 'a' || support > 'z') goto error_bell;
-if(!rb->marks[support-'a']) goto error_bell;
-rb->cursor = rb->marks[support-'a'];
+if(!acs_rb->marks[support-'a']) goto error_bell;
+acs_rb->cursor = acs_rb->marks[support-'a'];
 acs_cursorset();
 if(!quiet) acs_tone_onoff(0);
 break;
 
 case 45: /* reexec */
 acs_buzz();
-ss_close();
+acs_sy_close();
 acs_close();
 usleep(700000);
 /* We should really capture the absolute path of the running program,
@@ -932,7 +932,7 @@ exit(1);
 case 46: /* reload config file */
 acs_cr();
 acs_reset_configure();
-ss_say_string("reload");
+acs_say_string("reload");
 j_configure();
 return;
 
@@ -940,7 +940,7 @@ case 47: /* dump tty buffer to a file */
 if(dumpBuffer()) goto error_bell;
 acs_cr();
 sprintf(shortPhrase, "buffer %d", acs_fgc);
-		ss_say_string(prepTTSmsg(shortPhrase));
+		acs_say_string(prepTTSmsg(shortPhrase));
 return;
 
 case 48: /* suspend */
@@ -1002,7 +1002,7 @@ last_key = last_ss = 0;
 /* stop reading, and speak the new console */
 interrupt();
 sprintf(shortPhrase, "console %d", acs_fgc);
-		ss_say_string(prepTTSmsg(shortPhrase));
+		acs_say_string(prepTTSmsg(shortPhrase));
 
 if(suspended && !suspendlist[acs_fgc])
 unsuspend();
@@ -1015,7 +1015,7 @@ static void fifo_h(char *msg)
 {
 /* stop reading, and speak the message */
 interrupt();
-ss_say_string(prepTTSmsg(msg));
+acs_say_string(prepTTSmsg(msg));
 free(msg);
 } /* fifo_h */
 
@@ -1072,13 +1072,13 @@ const char *name;
 int style;
 const char *initstring;
 } synths[] = {
-{"dbe", SS_STYLE_DOUBLE,
+{"dbe", SY_STYLE_DOUBLE,
 "\1@ \0012b \00126g \0012o \00194i "},
-{"dte", SS_STYLE_DECEXP},
-{"dtp", SS_STYLE_DECPC},
-{"bns", SS_STYLE_BNS},
-{"ace", SS_STYLE_ACE},
-{"esp", SS_STYLE_ESPEAKUP},
+{"dte", SY_STYLE_DECEXP},
+{"dtp", SY_STYLE_DECPC},
+{"bns", SY_STYLE_BNS},
+{"ace", SY_STYLE_ACE},
+{"esp", SY_STYLE_ESPEAKUP},
 {0, 0}};
 
 static void
@@ -1143,8 +1143,8 @@ if(argc != 2) usage();
 for(i=0; synths[i].name; ++i)
 if(stringEqual(synths[i].name, argv[0])) break;
 if(!synths[i].name) usage();
-ss_style = synths[i].style;
-ss_startvalues();
+acs_style = synths[i].style;
+acs_style_defaults();
 ++argv, --argc;
 
 if (*argv[0] == '|') {
@@ -1179,17 +1179,17 @@ acs_key_h = key_h;
 acs_fgc_h = fgc_h;
 acs_more_h = more_h;
 acs_fifo_h = fifo_h;
-ss_imark_h = imark_h;
+acs_imark_h = imark_h;
 
 // this has to run after the device is open,
 // because it sends "key capture" commands to the acsint driver
 j_configure();
 
-if (cmd && pss_system(cmd) == -1) {
+if (cmd && acs_pipe_system(cmd) == -1) {
 fprintf(stderr, "Cannot execute command %s\n", cmd);
 exit(1);
 }
-if(!cmd && ess_open(serialdev, 9600)) {
+if(!cmd && acs_serial_open(serialdev, 9600)) {
 fprintf(stderr, "Cannot open serial device %s\n", serialdev);
 exit(1);
 }
@@ -1198,12 +1198,12 @@ openSound();
 
 /* Initialize the synthesizer. */
 if(synths[i].initstring)
-ss_say_string(synths[i].initstring);
+acs_say_string(synths[i].initstring);
 
 /* Adjust rate and voice, then greet. */
-ss_setvoice(4);
-ss_setspeed(9);
-ss_say_string("jupiter ready");
+acs_setvoice(4);
+acs_setspeed(9);
+acs_say_string("jupiter ready");
 
 acs_startfifo("/etc/jupiter.fifo");
 
@@ -1214,7 +1214,7 @@ acs_obreak(4);
 /* This runs forever, you have to hit interrupt to kill it,
  * or kill it from another console. */
 while(1) {
-acs_ss_events();
+acs_all_events();
 
 key_command:
 if(last_key) {
@@ -1232,7 +1232,7 @@ goRead = 0;
 /* fetch the new stuff and start reading */
 /* Pause, to allow for some characters to print, especially if clicks are on. */
 usleep(clicksOn ? 250000 : 25000);
-readNextMark = rb->end;
+readNextMark = acs_rb->end;
 /* The refresh is really a call to events() in disguise.
  * So any of those handlers could be called.
  * Turn reading on, so the more_h handler doesn't cause any trouble. */
