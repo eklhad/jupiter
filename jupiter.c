@@ -244,7 +244,8 @@ to a boolean mode in the system.
 *********************************************************************/
 
 static char **argvector;
-static char clicksOn = 1; // clicks accompany tty output
+static char clicksOn = 1; // sounds on, over all */
+static char clickTTY = 1; // clicks accompany tty output
 static char autoRead = 1; // read new text automatically
 static char oneLine; /* read one line at a time */
 static char transparent; // pass through
@@ -271,6 +272,7 @@ static int save_postprocess;
 
 	switch(c) {
 	case 'e': p = &echoMode; break;
+	case 't': p = &clickTTY; break;
 	case 'n': p = &clicksOn; break;
 	case 'a': p = &autoRead; break;
 	case '1': p = &oneLine; break;
@@ -299,6 +301,9 @@ case 'n':
 acs_sounds(*p);
 /* If turning sounds on, then the previous tone didn't take. */
 if(!quiet && *p) acs_tone_onoff(1);
+break;
+case 't':
+acs_tty_clicks(*p);
 break;
 case 'o': acs_serial_flow(1-*p); break;
 case 's':
