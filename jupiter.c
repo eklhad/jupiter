@@ -1038,7 +1038,7 @@ acs_shutup();
 }
 if(echoMode && echo == 1 && c < 256 && isprint(c)) {
 interrupt();
-speakChar(c, 1, clicksOn, 0);
+speakChar(c, 1, soundsOn, 0);
 }
 
 if(reading) return;
