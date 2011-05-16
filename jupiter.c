@@ -331,10 +331,7 @@ static void interrupt(void)
 {
 reading = 0;
 goRead = 0;
-/* Shutup use to be called only if acs_stillTalking was true.
- * But that leaves out cases where it is speaking a string of words,
- * rather than indexed sentences;
- * and there seems no harm in calling it every time. */
+if(acs_stillTalking())
 acs_shutup();
 }
 
@@ -1034,7 +1031,11 @@ static void more_h(int echo, unsigned int c)
 if(suspended) return;
 
 if (keyInterrupt && echo == 1) {
-interrupt();
+/* In this case we want to shutup, whether the unit
+ * is in reading/indexed mode or not. */
+acs_shutup();
+reading = 0;
+goRead = 0;
 }
 if(echoMode && echo == 1 && c < 256 && isprint(c)) {
 interrupt();
