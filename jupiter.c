@@ -1241,7 +1241,7 @@ unsigned int c;
 goRead = 0;
 /* fetch the new stuff and start reading */
 /* Pause, to allow for some characters to print, especially if clicks are on. */
-usleep(clicksOn ? 250000 : 25000);
+usleep((clicksOn && clickTTY) ? 250000 : 25000);
 readNextMark = acs_rb->end;
 /* The refresh is really a call to events() in disguise.
  * So any of those handlers could be called.
