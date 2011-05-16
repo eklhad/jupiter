@@ -611,7 +611,7 @@ return;
 	/* some comands are meaningless when the buffer is empty */
 	if(cmdp->nonempty) {
 if(!acs_rb->cursor &&
-cmd != 3 && cmd != 4 && cmd != 44)
+cmd != 3 && cmd != 4 && cmd != 39 && cmd != 44)
 goto error_buzz;
 if(acs_rb->end == acs_rb->start) goto error_bound;
 }
