@@ -244,7 +244,7 @@ to a boolean mode in the system.
 *********************************************************************/
 
 static char **argvector;
-static char clicksOn = 1; // sounds on, over all */
+static char soundsOn = 1; // sounds on, over all */
 static char clickTTY = 1; // clicks accompany tty output
 static char autoRead = 1; // read new text automatically
 static char oneLine; /* read one line at a time */
@@ -273,7 +273,7 @@ static int save_postprocess;
 	switch(c) {
 	case 'e': p = &echoMode; break;
 	case 't': p = &clickTTY; break;
-	case 'n': p = &clicksOn; break;
+	case 'n': p = &soundsOn; break;
 	case 'a': p = &autoRead; break;
 	case '1': p = &oneLine; break;
 	case 'o': p = &overrideSignals; break;
@@ -290,7 +290,7 @@ case 's': markleft = 0; p = &screenmode; break;
 	if(action == 1) *p = 1;
 	if(action == 2) *p ^= 1;
 	if(!quiet) {
-if(clicksOn || c == 'n')
+if(soundsOn || c == 'n')
 acs_tone_onoff(*p);
 else
 acs_say_string(*p ? "yes" : "no");
@@ -366,7 +366,7 @@ return;
 }
 
 gsprop = ACS_GS_REPEAT;
-if(oneLine | clicksOn)
+if(oneLine | soundsOn)
 gsprop |= ACS_GS_STOPLINE;
 else
 gsprop |= ACS_GS_NLSPACE;
@@ -389,7 +389,7 @@ first = tp_in->buf[1];
 if(first == '\n' || first == '\7') {
 /* starts out with newline or bell, which is usually associated with a sound */
 /* This will swoop/beep with clicks on, or say the word newline or bell with clicks off */
-speakChar(tp_in->buf[1], 1, clicksOn, 0);
+speakChar(tp_in->buf[1], 1, soundsOn, 0);
 
 if(oneLine && first == '\n') {
 acs_log("newline done\n");
@@ -561,9 +561,9 @@ static const char suspendCommand[] = { CMD_SUSPEND, 0};
 acs_suspendkeys(suspendCommand);
 reading = 0;
 suspended = 1;
-suspendClicks = clicksOn;
-if(clicksOn) {
-clicksOn = 0;
+suspendClicks = soundsOn;
+if(soundsOn) {
+soundsOn = 0;
 acs_sounds(0);
 }
 } /* suspend */
@@ -572,7 +572,7 @@ static void unsuspend(void)
 {
 acs_resumekeys();
 if(suspendClicks) {
-clicksOn = 1;
+soundsOn = 1;
 acs_sounds(1);
 }
 suspended = 0;
@@ -698,7 +698,7 @@ case 17: asword = 1; /* fall through */
 	case 16:
 letter:
 acs_cursorsync();
-		speakChar(acs_getc_uc(), 1, clicksOn, asword);
+		speakChar(acs_getc_uc(), 1, soundsOn, asword);
 		break;
 
 #if 0
@@ -709,7 +709,7 @@ acs_cursorsync();
 		c = acs_getc();
 		if(!isalpha(c)) goto error_bell;
 		rc = isupper(c);
-		if(clicksOn)
+		if(soundsOn)
 			acs_tone_onoff(rc);
 		else {
 if(!quiet) acs_click();
@@ -1031,7 +1031,7 @@ if(suspended) return;
 
 if(echoMode && echo == 1 && c < 256 && isprint(c)) {
 interrupt();
-speakChar(c, 1, clicksOn, 0);
+speakChar(c, 1, soundsOn, 0);
 }
 
 if(reading) return;
@@ -1241,7 +1241,7 @@ unsigned int c;
 goRead = 0;
 /* fetch the new stuff and start reading */
 /* Pause, to allow for some characters to print, especially if clicks are on. */
-usleep((clicksOn && clickTTY) ? 250000 : 25000);
+usleep((soundsOn && clickTTY) ? 250000 : 25000);
 readNextMark = acs_rb->end;
 /* The refresh is really a call to events() in disguise.
  * So any of those handlers could be called.
