@@ -250,6 +250,7 @@ static char autoRead = 1; // read new text automatically
 static char oneLine; /* read one line at a time */
 static char transparent; // pass through
 static char overrideSignals = 0; // don't rely on cts rts etc
+static char keyInterrupt;
 static char reading; /* continuous reading in progress */
 static char goRead; /* read the next sentence */
 /* for cut&paste */
@@ -281,6 +282,7 @@ case 's': markleft = 0; p = &screenmode; break;
 	case 'c': p = &cc_buffer; break;
 	case 'd': p = &jdebug; break;
 	case 'l': p = &tp_readLiteral; break;
+case 'i': p = &keyInterrupt; break;
 /* don't see the point of this one
 */
 	default: acs_bell(); return;
@@ -1029,6 +1031,11 @@ static void more_h(int echo, unsigned int c)
 {
 if(suspended) return;
 
+if (keyInterrupt && echo == 1) {
+interrupt();
+/* We need this, or single characters won't interrupt. */
+acs_shutup();
+}
 if(echoMode && echo == 1 && c < 256 && isprint(c)) {
 interrupt();
 speakChar(c, 1, clicksOn, 0);
