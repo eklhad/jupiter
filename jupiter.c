@@ -283,8 +283,6 @@ case 's': markleft = 0; p = &screenmode; break;
 	case 'd': p = &jdebug; break;
 	case 'l': p = &tp_readLiteral; break;
 case 'i': p = &keyInterrupt; break;
-/* don't see the point of this one
-*/
 	default: acs_bell(); return;
 } // switch
 
