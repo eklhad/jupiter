@@ -81,6 +81,7 @@ static const struct cmd speechcommands[] = {
 	{"reload the config file","reload",0,1},
 	{"dump buffer","dump",0, 1},
 	{"suspend the adapter","suspend",0,1},
+	{"test step function","step",0,1},
 	{0,""}
 };
 
@@ -580,6 +581,20 @@ suspended = 0;
 } /* unsuspend */
 
 
+static void
+testStepFunction(void)
+{
+FILE *f;
+int f1, f2, step, duration;
+f = fopen("/home/eklhad/progs/jupiter/step", "r");
+if(!f) return;
+fscanf(f, "%d,%d,%d,%d",
+&f1, &f2, &step, &duration);
+fclose(f);
+acs_scale(f1, f2, step, duration);
+} /* testStepFunction */
+
+
 /*********************************************************************
 Execute the speech command.
 The argument is the command list, null-terminated.
@@ -963,6 +978,10 @@ acs_notes(suspendNotes);
 suspend();
 }
 suspendlist[acs_fgc] = suspended;
+return;
+
+case 49:
+testStepFunction();
 return;
 
 	default:
