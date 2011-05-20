@@ -7,7 +7,7 @@ bindir = ${exec_prefix}/bin
 DEPFLAG =  -MMD
 CFLAGS += $(DEPFLAG)
 
-DRIVERPATH = ../acsint/driver
+DRIVERPATH = ../acsint/drivers
 ifneq "$(DRIVERPATH)" ""
 	CFLAGS += -I$(DRIVERPATH)
 	endif
