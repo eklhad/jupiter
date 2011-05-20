@@ -1,15 +1,31 @@
 #  Makefile for the jupiter speech adapter
 
+prefix = /usr/local
+exec_prefix = ${prefix}
+bindir = ${exec_prefix}/bin
+
+DEPFLAG =  -MMD
+CFLAGS += $(DEPFLAG)
+
+DRIVERPATH = ../acsint/driver
+ifneq "$(DRIVERPATH)" ""
+	CFLAGS += -I$(DRIVERPATH)
+	endif
+
+LDLIBS = -lacs
+
+SRCS = jupiter.c tpencode.c tpxlate.c
+OBJS = $(SRCS:.c=.o)
+
 all : jupiter
 
-CFLAGS = -I../acsint/bridge -I../acsint/drivers
+jupiter : $(OBJS)
 
-OBJS = jupiter.o tpencode.o tpxlate.o
+install : jupiter
+	${INSTALL} -d ${DESTDIR}${bindir}
+	${INSTALL_PROGRAM} jupiter ${DESTDIR}${bindir}
 
-$(OBJS) : tp.h ../acsint/bridge/acsbridge.h ../acsint/drivers/acsint.h
+uninstall :
+	rm -f ${DESTDIR}${bindir}/jupiter
 
-BRIDGE = ../acsint/bridge/libacs.a
-
-jupiter : $(OBJS) $(BRIDGE)
-	cc -s -o jupiter $(OBJS) $(BRIDGE)
-
+-include $(SRCS:.c=.d)
