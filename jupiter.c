@@ -586,7 +586,7 @@ testStepFunction(void)
 {
 FILE *f;
 int f1, f2, step, duration;
-f = fopen("/home/eklhad/progs/jupiter/step", "r");
+f = fopen("/tmp/step", "r");
 if(!f) return;
 fscanf(f, "%d,%d,%d,%d",
 &f1, &f2, &step, &duration);
