@@ -867,6 +867,7 @@ if(!quiet) acs_cr();
 
 	case 39: /* last complete line */
 acs_endbuf();
+acs_cursorsync();
 		if(screenmode) acs_back();
 	while(1) {
 		c = acs_getc();
