@@ -17,6 +17,9 @@ LDLIBS = -lacs
 SRCS = jupiter.c tpencode.c tpxlate.c
 OBJS = $(SRCS:.c=.o)
 
+INSTALL = install
+INSTALL_PROGRAM = ${INSTALL}
+
 all : jupiter
 
 jupiter : $(OBJS)
