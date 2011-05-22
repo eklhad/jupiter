@@ -7,7 +7,7 @@ This is a work in progress, well tested for some synthesizers,
 and not even tried on others.
 
 jupiter.c is the adapter,
-and it shows what you can do in 1,200 lines of code if you have a bridge layer
+and it shows what you can do in 1,500 lines of code if you have a bridge layer
 and a text preprocessor at your disposal.
 
 The key bindings are in jup.cfg.
