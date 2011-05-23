@@ -257,7 +257,7 @@ static char goRead; /* read the next sentence */
 /* for cut&paste */
 #define markleft acs_rb->marks[26]
 static unsigned int *markright;
-static char screenmode = 0;
+static char screenMode = 0;
 static char jdebug;
 static char cc_buffer = 0; // control chars in the buffer
 static char echoMode; // echo keys as they are typed
@@ -279,7 +279,7 @@ static int save_postprocess;
 	case 'a': p = &autoRead; break;
 	case '1': p = &oneLine; break;
 	case 'o': p = &overrideSignals; break;
-case 's': markleft = 0; p = &screenmode; break;
+case 's': markleft = 0; p = &screenMode; break;
 	case 'c': p = &cc_buffer; break;
 	case 'd': p = &jdebug; break;
 	case 'l': p = &tp_readLiteral; break;
@@ -663,7 +663,7 @@ if(!quiet) acs_tone_onoff(0);
 break;
 
 	case 2: /* locate visual cursor */
-		if(!screenmode) goto error_bell;
+		if(!screenMode) goto error_bell;
 acs_rb->cursor = acs_rb->v_cursor;
 acs_cursorset();
 		break;
@@ -868,7 +868,7 @@ if(!quiet) acs_cr();
 	case 39: /* last complete line */
 acs_endbuf();
 acs_cursorsync();
-		if(screenmode) acs_back();
+		if(screenMode) acs_back();
 	while(1) {
 		c = acs_getc();
 		if(c == '\n') asword = 1;
@@ -1064,6 +1064,8 @@ speakChar(c, 1, soundsOn, 0);
 
 if(reading) return;
 if(!autoRead) return;
+/* autoRead doesn't work in screen mode anyways */
+if(screenMode) return;
 if(echo) return;
 
 goRead = 1;
