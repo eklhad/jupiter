@@ -427,9 +427,9 @@ end = tp_in->buf + tp_in->len - 1;
 if(*end == '\r') {
 if(tp_in->len > 2 && tp_in->offset[tp_in->len-1])
 *end = 0, --tp_in->len;
-} else if(!isspace(*end)) {
+} else if(isalnum(*end)) {
 for(--end; *end; --end)
-if(isspace(*end)) break;
+if(!isalnum(*end)) break;
 if(*end++ && tp_in->offset[end-tp_in->buf]) {
 *end = 0;
 tp_in->len = end - tp_in->buf;
