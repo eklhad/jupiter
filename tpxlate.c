@@ -224,7 +224,7 @@ static const struct OUTWORDS outwords[3] = {
 "F T P site", "goapher server"},
 "a location under", "a file under", "a web page under",
 {"site", "at", "from", "to", "on", "visit", "is", 0},
-{"alpha", "brohvo", "charlie", "delta", "eko",
+{"alpha", "brohvo", "charlie", "delta", "echo",
 "foxtrot", "gawlf", "hotell", "india", "juleyet",
 "killo", "liema", "mike", "noavember", "oscar",
 "popa", "kebeck", "romeo", "seeara", "tango",
