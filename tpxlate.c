@@ -557,7 +557,7 @@ static int appendDigitString(const char *s, int n)
 	while(n--) {
 		c = *s++;
 		if(appendIdigit(c-'0')) return 1;
-		if(n && !tp_digitWords) appendBackup();
+//		if(n && !tp_digitWords) appendBackup();
 	}
 	return 0;
 } /* appendDigitString */

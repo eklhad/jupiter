@@ -959,8 +959,6 @@ static struct RESERVED reserved[] = {
 {"dwarfs", 99, ACS_LANG_ENGLISH, CX_WORD, 0, 0, "dwarfss"},
 {"hawk", 99, ACS_LANG_ENGLISH, CX_WORD, 0, 0, "halk"},
 {"gawk", 99, ACS_LANG_ENGLISH, CX_WORD, 0, 0, "galk"},
-{"bible", 99, ACS_LANG_ENGLISH, CX_WORD, 0, 0, "bighble"},
-{"lible", 99, ACS_LANG_ENGLISH, CX_WORD, 0, 0, "lighble"},
 {"kbytes", 99, ACS_LANG_ENGLISH, CX_WORD, 0, 0, "killaBites"},
 {"mbytes", 99, ACS_LANG_ENGLISH, CX_WORD, 0, 0, "megaBites"},
 {"kiwi", 99, ACS_LANG_ENGLISH, CX_WORD, 0, 0, "keewey"},
