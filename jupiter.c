@@ -1152,6 +1152,9 @@ tp_relativeDate = 1;
 if(argc && stringEqual(argv[0], "-d")) {
 /* it should be safe to chdir, but not to close std{in,out,err}. Reload prints stuff there. */
 daemon(0, 1);
+/* make this the leader of its process group,
+ * so the child process, a software synth, dies when it does. */
+setsid();
 ++argv, --argc;
 }
 
