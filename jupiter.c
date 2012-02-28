@@ -1196,6 +1196,11 @@ if(port < 0 || port > 3) usage();
 sprintf(serialdev, "/dev/ttyS%d", port);
 }
 
+/* Compare major minor numbers on acsdriver with what we see
+ * in /sys.  If it's wrong, and we are root, fix it up.
+ * This is linux only. */
+acs_nodecheck(acsdriver);
+
 if(acs_open(acsdriver) < 0) {
 fprintf(stderr, "cannot open the driver %s;\n%s.\n",
 acsdriver, strerror(errno));
