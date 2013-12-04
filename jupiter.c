@@ -415,6 +415,8 @@ return;
 goto top;
 }
 
+acs_log("insentence %s\n", tp_in->buf+1);
+
 tp_in->len = 1 + strlen(tp_in->buf+1);
 /* If the sentence runs all the way to the end of the buffer,
  * then we might be in the middle of printing a word.
@@ -1120,7 +1122,10 @@ const char *initstring;
 static void
 usage(void)
 {
-fprintf(stderr, "usage:  jupiter [-d] [-c configfile] synthesizer port\n");
+fprintf(stderr, "usage:  jupiter [-d] [-a] [-c configfile] synthesizer port\n");
+fprintf(stderr, "-d is daemon mode, run in background.\n");
+fprintf(stderr, "-a is alphanumeric translations, such as dates,\n\
+\ttimes, fractions, urls, and so on.\n");
 fprintf(stderr, "Synthesizer is: dbe = doubletalk external,\n");
 fprintf(stderr, "dte = dectalk external, dtp = dectalk pc,\n");
 fprintf(stderr, "bns = braille n speak, ace = accent, esp = espeakup.\n");
@@ -1155,6 +1160,11 @@ daemon(0, 1);
 /* make this the leader of its process group,
  * so the child process, a software synth, dies when it does. */
 setsid();
+++argv, --argc;
+}
+
+if(argc && stringEqual(argv[0], "-a")) {
+tp_alnumPrep = 1;
 ++argv, --argc;
 }
 

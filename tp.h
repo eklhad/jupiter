@@ -55,6 +55,7 @@ extern struct textbuf *tp_in, *tp_out;
 /* case independent character compare */
 #define ci_cmp(x, y) (tolower(x) != tolower(y))
 
+extern char tp_alnumPrep;
 extern char tp_relativeDate;
 extern char tp_showZones;
 extern int tp_myZone; /* offset from gmt */

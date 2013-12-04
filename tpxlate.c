@@ -27,6 +27,7 @@ A few global variables.
 These can be adjusted based on your synthesizer.
 *********************************************************************/
 
+char tp_alnumPrep = 0;
 char tp_relativeDate = 0;
 char tp_showZones = 0;
 int tp_myZone = -5; /* offset from gmt */
@@ -2798,7 +2799,8 @@ void prepTTS(void)
 	/* Encode constructs such as date and time.
 	 * There are some word replacements that can take place even when
 	 * reading symbol by symbol. */
-	if(!tp_oneSymbol || isalpha(tp_in->buf[1])) {
+	if(tp_alnumPrep &&
+		(!tp_oneSymbol || isalpha(tp_in->buf[1]))) {
 		doEncode();
 		debugCheck('h', tp_out);
 		textBufSwitch();
