@@ -132,3 +132,20 @@ modprobe acsint
 #  The options and args have to appear in this order.
 jupiter -d -a dbe 0
 
+If you're running a soft synth like espeak, you may want something like this.
+
+jupiter -d esp "|espeakup -V en-us-a 2>/dev/null"
+
+But first, you should set up your sound card,
+load the right module and call alsactl to initialize.
+Normally this is done much later but we need it now,
+or the adapter won't talk.
+Also, mount /sys type sysfs,
+because jupiter looks at the system, through /sys,
+to see if /dev/acsint is correct.
+If it is missing, or its major / minor number is wrong,
+and assuming jupiter runs as root,
+then it recreates /dev/acsint to have the correct major and minor numbers.
+I'm trying to do everything I can to make this work,
+because if it doesn't, the system isn't talking, and you're in trouble.
+
