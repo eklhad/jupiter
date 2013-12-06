@@ -249,7 +249,6 @@ static char soundsOn = 1; // sounds on, over all */
 static char clickTTY = 1; // clicks accompany tty output
 static char autoRead = 1; // read new text automatically
 static char oneLine; /* read one line at a time */
-static char transparent; // pass through
 static char overrideSignals = 0; // don't rely on cts rts etc
 static char keyInterrupt;
 static char reading; /* continuous reading in progress */
