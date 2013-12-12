@@ -1044,7 +1044,6 @@ static void fifo_h(char *msg)
 /* stop reading, and speak the message */
 interrupt();
 acs_say_string(msg);
-free(msg);
 } /* fifo_h */
 
 static void more_h(int echo, unsigned int c)
