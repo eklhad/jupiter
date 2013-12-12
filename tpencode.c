@@ -2304,7 +2304,7 @@ static int encodeNumber(const char *s)
 	char ampm;
 	int month, day, year;
 	int hour, minute, second;
-	int z; /* timezone */
+	int z = 0; /* timezone */
 	const char *p1; /* area code */
 	const char *p2; /* office code */
 	const char *p3; /* xxxx */
@@ -2329,7 +2329,7 @@ if(s[-1] == '^') goto done;
 		0,1,0,0,0,0,0,0,0,1,0,1,0,1,1,1,0,1,1,1,0,1,1,1,1,0,1,1,1,1,0,1};
 		int yd; /* digits in year */
 		int day2 = 0;
-		int isFraction = 0, isDF = 0;
+		int isFraction = 0;
 
 		if(s0[-1] == '/') goto done;
 		c = *++s;
@@ -2363,14 +2363,11 @@ if(s[-1] == '^') goto done;
 		/* cannot have letters on both sides */
 		if(isalpha(c) && isalpha(s[-1])) goto done;
 		if(year > 0) goto doDate;
-if(day2) { /* 3/4 is more likely a fraction than march 4 */
-			if(day < 10) goto doDate; /* 5/09 */
-			if(*s0 == '0') goto doDate; /*05/19 */
-		/* 04/3 is an unknown format */
-		if(*s0 == '0') goto done;
-		/* We'll assume you're not going to use improper fractions. */
-		if(month >= day) goto doDate;
-}
+		/* no year, I'm not going to try to call it a date. */
+		/* Only thing left is maybe a fraction */
+		/* No leading 0, and no improper fraction. */
+		if(*s0 == '0' || day2 && day < 10) goto done;
+		if(month >= day) goto done;
 		/* A good indication of fraction is a prior
 		 * number, such as 3 1/2 feet tall. */
 		t = tp_out->buf + tp_out->len - 1;
@@ -2379,24 +2376,30 @@ if(day2) { /* 3/4 is more likely a fraction than march 4 */
 		if(c == '-') c = *--t;
 		if(c == ' ') c = *--t;
 		if(isdigit(c)) {
-			extern const char *andWord;
-			/* get rid of the minus, and any spaces. */
-			++t;
-			*t++ = ' ';
-			tp_out->len = t - tp_out->buf;
-			/* three and one half */
-			if(appendString(andWord)) goto overflow;
-			isFraction = 1;
-			goto doDate;
+			/* has to be a modest stand-alone number */
+			q = t - 1;
+			if(isdigit(*q)) --q;
+			if(isdigit(*q)) --q;
+			if(!isalnum(*q)) {
+				extern const char *andWord;
+				/* get rid of the minus, and any spaces. */
+				++t;
+				*t++ = ' ';
+					tp_out->len = t - tp_out->buf;
+				/* three and one half */
+				if(appendString(andWord)) goto overflow;
+				isFraction = 1;
+				goto doFrac;
+			}
 		} /* prior number */
 if(day2) {
-		if(rareDenominator[day]) goto doDate;
-		if(day >= 20 && month != 1) goto doDate;
+		if(rareDenominator[day]) goto done;
+		if(day >= 20 && month != 1) goto done;
 		/* numerator and denominator are coprime,
 		 * except perhaps x/10. */
 		if(day != 10) {
-			if(!((month|day)&1)) goto doDate;
-			if(month%3 == 0 && day%3 == 0) goto doDate;
+			if(!((month|day)&1)) goto done;
+			if(month%3 == 0 && day%3 == 0) goto done;
 		}
 		}
 
@@ -2410,7 +2413,7 @@ if(day2) {
 			if(i > 2) i = 0;
 			if(wordInList(postFractionWords, q, i) >= 0) {
 				isFraction = 1;
-				goto doDate;
+				goto doFrac;
 			}
 		}
 
@@ -2423,24 +2426,23 @@ if(day2) {
 			++q;
 			if(wordInList(preFractionWords, q, i) >= 0) {
 				isFraction = 1;
-				goto doDate;
+				goto doFrac;
 			}
 		}
 
-		/* can't decide between date and fraction. */
-		isDF = 1;
+		goto done;
 
 doDate:
 		z = zoneCheck(&s);
-		if(z) isDF = isFraction = 0;
+		if(z) isFraction = 0;
+doFrac:
 		numbuf[0] = SP_MARK;
 		numbuf[1] = SP_DATE;
 		if(isFraction) numbuf[1] = SP_FRAC;
-		if(isDF) numbuf[1] = SP_DF;
 		numbuf[2] = month + 'A';
 		numbuf[3] = day + 'A';
 		i = 4;
-		if(!(isFraction|isDF) && year) {
+		if(!isFraction && year) {
 			sprintf(numbuf+4, "%04d", year);
 			i += 4;
 		}

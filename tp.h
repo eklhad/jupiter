@@ -39,7 +39,6 @@ SP_WDAY,
 SP_STATE,
 SP_BIBLE,
 SP_URL,
-SP_DF, // date or fraction
 };
 
 struct textbuf {

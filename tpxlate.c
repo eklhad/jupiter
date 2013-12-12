@@ -1496,7 +1496,6 @@ static int expandCode(const char **sp)
 		break;
 
 	case SP_DATE:
-code_date:
 		m = *start++ - 'A';
 		d = *start++ - 'A';
 		y = 0;
@@ -1561,32 +1560,7 @@ code_date:
 			appendIchar('!')) goto overflow;
 		break;
 
-	case SP_DF: case SP_FRAC:
-		/* Fraction before or after makes this a fraction. */
-		/* Same for date. */
-		t = end;
-		if(*t) ++t;
-		c = *t;
-		if(c == ' ' || c == '\n') c = *++t;
-		if(c == '-') c = *++t;
-		if(c == ' ' || c == '\n') c = *++t;
-		if(c == SP_MARK && t[1] == SP_DATE) goto code_date;
-		if(c == SP_MARK && t[1] == SP_FRAC) { code = SP_FRAC; goto code_frac; }
-		t = start-3;
-		c = *t;
-		if(c == ' ' || c == '\n') c = *--t;
-		if(c == '-') c = *--t;
-		if(c == ' ' || c == '\n') c = *--t;
-		if(c == SP_MARK) {
-			c = *--t;
-			while(c && c != SP_MARK) c = *--t;
-			if(c) {
-				c = t[1];
-				if(c == SP_DATE) goto code_date;
-				if(c == SP_FRAC) { code = SP_FRAC; goto code_frac; }
-			}
-		} /* prior code */
-code_frac:
+	case SP_FRAC:
 		/* numerator and denominator */
 		m = *start++ - 'A';
 		d = *start++ - 'A';
@@ -2378,8 +2352,8 @@ do_to_word:
 		}
 		if(leftcode == SP_TIME && rightnum > 0 && rightnum <= 12) goto do_to_word;
 		if(rightcode == SP_TIME && leftnum > 0 && leftnum <= 12) goto do_to_word;
-		if((leftcode == SP_DATE || leftcode == SP_FRAC || leftcode == SP_DF) &&
-		(rightcode == SP_DATE || rightcode == SP_FRAC || rightcode == SP_DF))
+		if((leftcode == SP_DATE || leftcode == SP_FRAC) &&
+		(rightcode == SP_DATE || rightcode == SP_FRAC))
 			goto do_to_word;
 		if(leftcode|rightcode) goto do_comma;
 		if(spaceAround == 2) break;
