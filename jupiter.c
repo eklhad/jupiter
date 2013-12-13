@@ -12,6 +12,7 @@ as articulated by the Free Software Foundation.
 #include <iconv.h>
 #include <wchar.h>
 #include <unistd.h>
+#include <locale.h>
 
 #include <linux/vt.h>
 
@@ -1102,6 +1103,41 @@ puts(prepTTSmsg(line));
 exit(0);
 } /* testTTS */
 
+static void
+selectLanguage(void)
+{
+    char buf[8];
+    char *s = getenv("LANG");
+
+acs_lang = ACS_LANG_EN; // default
+
+    if(!s)
+	return;
+    if(!*s)
+	return;
+
+    strncpy(buf, s, 7);
+    buf[7] = 0;
+for(s=buf; *s; ++s) {
+if(*s >= 'A' && *s <= 'Z')
+*s |= 0x20;
+}
+
+    if(!strncmp(buf, "en", 2))
+	return;			/* english is default */
+
+    if(!strncmp(buf, "de", 2)) {
+acs_lang = ACS_LANG_DE;
+	return;
+    }
+
+    if(!strncmp(buf, "pt", 2)) {
+acs_lang = ACS_LANG_PT;
+	return;
+    }
+
+    fprintf(stderr, "Sorry, language %s is not implemented\n", buf);
+}				/* selectLanguage */
 /* Supported synthesizers */
 struct synth {
 const char *name;
@@ -1142,8 +1178,7 @@ char *cmd = NULL;
 argvector = argv;
 ++argv, --argc;
 
-/* this has to be done first */
-acs_lang = ACS_LANG_ENGLISH;
+selectLanguage();
 
 if(setupTTS()) {
 fprintf(stderr, "Could not malloc space for text preprocessing buffers.\n");
