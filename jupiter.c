@@ -9,8 +9,6 @@ as articulated by the Free Software Foundation.
 
 #include <errno.h>
 #include <fcntl.h>
-#include <iconv.h>
-#include <wchar.h>
 #include <unistd.h>
 #include <locale.h>
 
@@ -490,54 +488,18 @@ readNextPart();
 /*********************************************************************
 Dump the tty buffer into a file.
 But first we need to convert it from unicode to utf8.
-The conversion routine was provided by Chris Brannon.
+The conversion routine is part of the acsint bridge layer.
 *********************************************************************/
 
-char *
-uni2utf8(const wchar_t * inbuf)
-{
-    size_t nconv;
-    size_t inbuf_l;
-    size_t outbuf_l;
-    char *outbuf;
-    char *outptr;
-    iconv_t *converter;
-    char *inptr = (char *)inbuf;
-
-    inbuf_l = wcslen(inbuf);
-    outbuf_l = inbuf_l * 6 * sizeof (char);
-    inbuf_l *= sizeof (wchar_t);
-/* Need size in bytes for iconv. */
-    outbuf = malloc(outbuf_l + sizeof (char));
-
-    if(!outbuf)
-	return NULL;
-
-    outptr = outbuf;
-    converter = iconv_open("UTF-8", "wchar_t");
-    if(converter == (iconv_t *) - 1) {
-	free(outbuf);
-	return NULL;
-    }
-
-    nconv = iconv(converter, &inptr, &inbuf_l, &outptr, &outbuf_l);
-    if(nconv == (size_t) - 1) {
-	free(outbuf);
-	iconv_close(converter);
-	return NULL;
-    }
-
-    *outptr = '\0';
-/* Liberally overallocated; uncomment to save memory */
-/* outbuf = realloc(outbuf, (outbuf - outptr + 1) * sizeof(char)); */
-    iconv_close(converter);
-    return outbuf;
-}				/* uni2utf8 */
-
+static const char *bufword[] = {"",
+"buffer",
+"buffer",
+"buffer",
+};
 static int dumpBuffer(void)
 {
 int fd, l, n;
-char *utf8 =  uni2utf8((wchar_t*)acs_rb->start);
+char *utf8 =  acs_uni2utf8(acs_rb->start);
 if(!utf8) return -1;
 sprintf(shortPhrase, "/tmp/buf%d", acs_fgc);
 fd = open(shortPhrase, O_WRONLY|O_CREAT|O_TRUNC, 0666);
@@ -964,7 +926,8 @@ return;
 case 47: /* dump tty buffer to a file */
 if(dumpBuffer()) goto error_bell;
 acs_cr();
-sprintf(shortPhrase, "buffer %d", acs_fgc);
+sprintf(shortPhrase, "%s %d",
+bufword[acs_lang], acs_fgc);
 		acs_say_string(prepTTSmsg(shortPhrase));
 return;
 
